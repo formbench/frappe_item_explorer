@@ -44,6 +44,53 @@ frappe.treeview_settings['Item Explorer'] = {
   },
   on_get_node: function (nodes) {
     // triggered when `get_tree_nodes` returns nodes
+  
+      let accounts = [];
+      if (deep) {
+        // in case of `get_all_nodes`
+        accounts = nodes.reduce((acc, node) => [...acc, ...node.data], []);
+      } else {
+        accounts = nodes;
+      }
+  
+      frappe.db.get_list("Item", ).then((value) => {
+        if(value) {
+  
+          const get_balances = frappe.call({
+            method: 'erpnext.accounts.utils.get_account_balances',
+            args: {
+              accounts: accounts,
+              company: cur_tree.args.company
+            },
+          });
+  
+          get_balances.then(r => {
+            if (!r.message || r.message.length == 0) return;
+  
+            for (let account of r.message) {
+  
+              const node = cur_tree.nodes && cur_tree.nodes[account.value];
+              if (!node || node.is_root) continue;
+  
+              // show Dr if positive since balance is calculated as debit - credit else show Cr
+              const balance = account.balance_in_account_currency || account.balance;
+              const dr_or_cr = balance > 0 ? "Dr": "Cr";
+              const format = (value, currency) => format_currency(Math.abs(value), currency);
+  
+              if (account.balance!==undefined) {
+                node.parent && node.parent.find('.balance-area').remove();
+                $('<span class="balance-area pull-right">'
+                  + (account.balance_in_account_currency ?
+                     (format(account.balance_in_account_currency, account.account_currency) + " / ") : "")
+                  + format(account.balance, account.company_currency)
+                  + " " + dr_or_cr
+                  + '</span>').insertBefore(node.$ul);
+              }
+            }
+          });
+        }
+      });
+    },
   },
   // enable custom buttons beside each node
   extend_toolbar: true,
