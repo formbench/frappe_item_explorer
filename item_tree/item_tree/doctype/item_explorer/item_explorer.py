@@ -27,55 +27,71 @@ class ItemExplorer(NestedSet):
 
 @frappe.whitelist()
 def get_children(doctype=None, parent=None, item_code=None, warehouse_category=None, is_root=False):
-	group_filters = [["item_group_name", "!=", "Alle Artikelgruppen"]]
-	parent_item_filters = [["disabled", "=", 0]]
-	child_item_filters = [["disabled", "=", 0]]
-	is_get_items = True
+	group_filters = [["parent_product_category", "!=", "Alle Artikelgruppen"]]
+	parent_item_filters = [["disabled", "=", 0],["variant_of", "=", ""]]
+	child_item_filters = [["disabled", "=", 0],["variant_of", "=", parent]]
 
-	frappe.msgprint(json.dumps({"is_root": is_root, "parent": parent, "doctype": doctype}))
 	# Root level
-	if is_root:
-		frappe.msgprint("1")
-		group_filters = ([["parent_item_group", "=", "Alle Artikelgruppen"]])
-		is_get_items = False
-	# not root level and parent is group
+	if is_root: # groups without a parent, items without a category
+		group_filters = ([["parent_product_category", "in", ["Alle Artikelgruppen", ""]]])
+		parent_item_filters.append(["custom_product_category", "=", ""])
+	elif parent == "others": # groups with a parent and items without a category
+		group_filters.append(["parent_product_category", "=", parent])
+		parent_item_filters.append(["custom_product_category", "=", ""])
+	elif parent: # groups with a parent and items with a category
+		group_filters.append(["parent_product_category", "=", parent])
+		parent_item_filters.append(["custom_product_category", "=", parent])
+
+	groups = get_item_groups(group_filters)
+	items = get_items(parent_item_filters)
+
+	# add a top level category to catch all uncategorized items
+	if is_root == "true" and len(items) > 0:
+		groups.append({
+			"value": "others",
+			"title": "Others",
+			"expandable": True,
+			"parent": "",
+		})
+		# assign item to new parent "others"
+		for item in items:
+			item.parent = "others"
+
+	collection = []
+	for item in items:
+		item["type"] = "Item"
+	for group in groups:
+		group["type"] = "Group"
+
+	if parent == "others":
+		collection = items # others level
 	elif parent:
-		frappe.msgprint("2")
-		group_filters.append(["parent_item_group", "=", parent])
-		parent_item_filters.append(["item_group", "=", parent])
-		parent_item_filters.append(["variant_of", "=", ""])
-		child_item_filters.append(["variant_of", "=", parent])
+		variant_items = get_items(child_item_filters)
+		for item in variant_items:
+			item["type"] = "Variant Item"
+		collection = groups + items + variant_items # child level
 	else:
-		frappe.msgprint("Unhandled Case")
+		collection = groups # root level no items here since we put them in "others"
 
-	frappe.msgprint(json.dumps(group_filters))
-	frappe.msgprint(json.dumps(parent_item_filters))
-
-
-	collection = get_item_groups(group_filters)
-	if is_get_items == True: 
-		collection = collection + get_items(parent_item_filters)
-		collection = collection + get_items(child_item_filters)
-
-	return collection	
+	return collection
 
 
 def get_items(filters):
 	return frappe.get_list(
 		"Item",
-		fields=["name as value", "item_name as title", "has_variants as expandable", "custom_warehouse_category as warehouse_category", "variant_of as parent", "item_group"],
+		fields=["name as value", "item_name as title", "has_variants as expandable", "custom_warehouse_category as warehouse_category", "variant_of as parent", "custom_product_category as product_category"],
 		filters=filters,
 		order_by="name",
 	)
 	
 def get_item_groups(filters):
 	list = frappe.get_list(
-		"Item Group",
-		fields=["name as value", "item_group_name as title", "parent_item_group as parent", "is_group as expandable"],
+		"Product Category",
+		fields=["name as value", "title", "parent_product_category as parent", "is_group as expandable"],
 		filters=filters,
 		order_by="name",
 	)
-	for item in list:
-		item["expandable"] = True
+	for group in list:
+		group["expandable"] = True
 	
 	return list
