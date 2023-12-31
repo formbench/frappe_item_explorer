@@ -36,14 +36,22 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
     {
-      label: 'Edit',
+      label: 'Edit Category',
       condition: function (node) {
-        return true;
+        return node.data.type == 'Category';
       },
       click: function (node) {
-        if (node.data.type == 'Group')
-          window.open('/app/product-category/' + node.data.value);
-        else window.open('/app/item/' + node.data.value);
+        window.open('/app/product-category/' + node.data.value);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: 'Edit Item',
+      condition: function (node) {
+        return node.data.type == 'Item' || node.data.type == 'Variant Item';
+      },
+      click: function (node) {
+        window.open('/app/item/' + node.data.value);
       },
       btnClass: 'hidden-xs',
     },
