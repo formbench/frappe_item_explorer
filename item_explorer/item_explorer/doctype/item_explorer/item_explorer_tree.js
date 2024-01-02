@@ -10,7 +10,7 @@ frappe.treeview_settings['Item Explorer'] = {
     },
   ],
   get_tree_nodes:
-    'item_tree.item_tree.doctype.item_explorer.item_explorer.get_children',
+    'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
   onload: function (treeview) {
     // triggered when tree view is instanciated
   },

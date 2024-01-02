@@ -1,5 +1,5 @@
 [project]
-name = "item_tree"
+name = "item_explorer"
 authors = [
     { name = "formbench", email = "tech@formbench.com"}
 ]

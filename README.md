@@ -1,4 +1,4 @@
-## Item Tree
+## Item Explorer
 
 Explore Variant Items hierarchically
 
