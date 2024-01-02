@@ -1,0 +1,96 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "field:sku",
+  "creation": "2023-12-30 12:45:53.024519",
+  "default_view": "Tree",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "item_name",
+    "sku",
+    "lft",
+    "rgt",
+    "is_group",
+    "old_parent",
+    "parent_item_explorer"
+  ],
+  "fields": [
+    {
+      "fieldname": "item_name",
+      "fieldtype": "Data",
+      "label": "Item Name"
+    },
+    {
+      "fieldname": "sku",
+      "fieldtype": "Data",
+      "label": "SKU",
+      "unique": 1
+    },
+    {
+      "fieldname": "lft",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Left",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "rgt",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Right",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "default": "0",
+      "fieldname": "is_group",
+      "fieldtype": "Check",
+      "label": "Is Group"
+    },
+    {
+      "fieldname": "old_parent",
+      "fieldtype": "Link",
+      "label": "Old Parent",
+      "options": "Item Explorer"
+    },
+    {
+      "fieldname": "parent_item_explorer",
+      "fieldtype": "Link",
+      "label": "Parent Item Explorer",
+      "options": "Item Explorer"
+    }
+  ],
+  "in_create": 1,
+  "index_web_pages_for_search": 1,
+  "is_tree": 1,
+  "is_virtual": 1,
+  "links": [],
+  "modified": "2023-12-30 19:28:09.304743",
+  "modified_by": "Administrator",
+  "module": "Item Explorer",
+  "name": "Item Explorer",
+  "naming_rule": "By fieldname",
+  "nsm_parent_field": "parent_item_explorer",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "read_only": 1,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}

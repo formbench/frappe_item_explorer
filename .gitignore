@@ -3,5 +3,5 @@
 *.egg-info
 *.swp
 tags
-item_tree/docs/current
+item_explorer/docs/current
 node_modules/

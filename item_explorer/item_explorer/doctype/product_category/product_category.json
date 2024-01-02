@@ -1,0 +1,96 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "autoname",
+  "creation": "2023-12-30 21:10:08.734262",
+  "default_view": "Tree",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "title",
+    "lft",
+    "rgt",
+    "is_group",
+    "old_parent",
+    "parent_product_category"
+  ],
+  "fields": [
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Title",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "lft",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Left",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "rgt",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Right",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "default": "0",
+      "fieldname": "is_group",
+      "fieldtype": "Check",
+      "label": "Is Group"
+    },
+    {
+      "fieldname": "old_parent",
+      "fieldtype": "Link",
+      "hidden": 1,
+      "label": "Old Parent",
+      "options": "Product Category"
+    },
+    {
+      "allow_in_quick_entry": 1,
+      "fieldname": "parent_product_category",
+      "fieldtype": "Link",
+      "label": "Parent Product Category",
+      "options": "Product Category"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "is_tree": 1,
+  "links": [],
+  "modified": "2023-12-30 22:07:50.662939",
+  "modified_by": "Administrator",
+  "module": "Item Explorer",
+  "name": "Product Category",
+  "naming_rule": "By script",
+  "nsm_parent_field": "parent_product_category",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "quick_entry": 1,
+  "search_fields": "title",
+  "show_title_field_in_link": 1,
+  "sort_field": "title",
+  "sort_order": "ASC",
+  "states": [],
+  "title_field": "title",
+  "track_changes": 1
+}

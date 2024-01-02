@@ -1,6 +1,6 @@
-app_name = "item_tree"
-app_title = "Item Tree"
-app_publisher = "formbench"
+app_name = "item_explorer"
+app_title = "Item Explorer"
+app_publisher = "formbench GmbH"
 app_description = "Explore Variant Items hierarchically"
 app_email = "tech@formbench.com"
 app_license = "MIT"
@@ -9,15 +9,15 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/item_tree/css/item_tree.css"
-# app_include_js = "/assets/item_tree/js/item_tree.js"
+# app_include_css = "/assets/item_explorer/css/item_explorer.css"
+# app_include_js = "/assets/item_explorer/js/item_explorer.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/item_tree/css/item_tree.css"
-# web_include_js = "/assets/item_tree/js/item_tree.js"
+# web_include_css = "/assets/item_explorer/css/item_explorer.css"
+# web_include_js = "/assets/item_explorer/js/item_explorer.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "item_tree/public/scss/website"
+# website_theme_scss = "item_explorer/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -54,43 +54,43 @@ app_license = "MIT"
 
 # add methods and filters to jinja environment
 # jinja = {
-#	"methods": "item_tree.utils.jinja_methods",
-#	"filters": "item_tree.utils.jinja_filters"
+#	"methods": "item_explorer.utils.jinja_methods",
+#	"filters": "item_explorer.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "item_tree.install.before_install"
-# after_install = "item_tree.install.after_install"
+# before_install = "item_explorer.install.before_install"
+# after_install = "item_explorer.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "item_tree.uninstall.before_uninstall"
-# after_uninstall = "item_tree.uninstall.after_uninstall"
+# before_uninstall = "item_explorer.uninstall.before_uninstall"
+# after_uninstall = "item_explorer.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "item_tree.utils.before_app_install"
-# after_app_install = "item_tree.utils.after_app_install"
+# before_app_install = "item_explorer.utils.before_app_install"
+# after_app_install = "item_explorer.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "item_tree.utils.before_app_uninstall"
-# after_app_uninstall = "item_tree.utils.after_app_uninstall"
+# before_app_uninstall = "item_explorer.utils.before_app_uninstall"
+# after_app_uninstall = "item_explorer.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "item_tree.notifications.get_notification_config"
+# notification_config = "item_explorer.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -129,39 +129,39 @@ app_license = "MIT"
 
 # scheduler_events = {
 #	"all": [
-#		"item_tree.tasks.all"
+#		"item_explorer.tasks.all"
 #	],
 #	"daily": [
-#		"item_tree.tasks.daily"
+#		"item_explorer.tasks.daily"
 #	],
 #	"hourly": [
-#		"item_tree.tasks.hourly"
+#		"item_explorer.tasks.hourly"
 #	],
 #	"weekly": [
-#		"item_tree.tasks.weekly"
+#		"item_explorer.tasks.weekly"
 #	],
 #	"monthly": [
-#		"item_tree.tasks.monthly"
+#		"item_explorer.tasks.monthly"
 #	],
 # }
 
 # Testing
 # -------
 
-# before_tests = "item_tree.install.before_tests"
+# before_tests = "item_explorer.install.before_tests"
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-#	"frappe.desk.doctype.event.event.get_events": "item_tree.event.get_events"
+#	"frappe.desk.doctype.event.event.get_events": "item_explorer.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-#	"Task": "item_tree.task.get_dashboard_data"
+#	"Task": "item_explorer.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -175,13 +175,13 @@ app_license = "MIT"
 
 # Request Events
 # ----------------
-# before_request = ["item_tree.utils.before_request"]
-# after_request = ["item_tree.utils.after_request"]
+# before_request = ["item_explorer.utils.before_request"]
+# after_request = ["item_explorer.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["item_tree.utils.before_job"]
-# after_job = ["item_tree.utils.after_job"]
+# before_job = ["item_explorer.utils.before_job"]
+# after_job = ["item_explorer.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -211,5 +211,5 @@ app_license = "MIT"
 # --------------------------------
 
 # auth_hooks = [
-#	"item_tree.auth.validate"
+#	"item_explorer.auth.validate"
 # ]
