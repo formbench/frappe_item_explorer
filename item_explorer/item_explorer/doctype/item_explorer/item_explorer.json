@@ -70,7 +70,7 @@
   "links": [],
   "modified": "2023-12-30 19:28:09.304743",
   "modified_by": "Administrator",
-  "module": "Item Tree",
+  "module": "Item Explorer",
   "name": "Item Explorer",
   "naming_rule": "By fieldname",
   "nsm_parent_field": "parent_item_explorer",
