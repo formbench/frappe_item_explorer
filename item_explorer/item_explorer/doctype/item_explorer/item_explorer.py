@@ -48,14 +48,14 @@ def get_children(parent=None, item_code=None, product_category=None, is_root=Fal
 	# add a top level category to catch all uncategorized items
 	if is_root == "true" and len(items) > 0:
 		categories.append({
-			"value": "default_others",
+			"value": "others",
 			"title": "Others",
 			"expandable": True,
 			"parent": "",
 		})
 		# assign item to new parent "others"
 		for item in items:
-			item.parent = "default_others"
+			item.parent = "others"
 
 	collection = []
 	for item in items:
