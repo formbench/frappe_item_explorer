@@ -3,7 +3,7 @@
   "allow_rename": 1,
   "autoname": "autoname",
   "creation": "2023-12-30 21:10:08.734262",
-  "default_view": "Tree",
+  "default_view": "List",
   "doctype": "DocType",
   "editable_grid": 1,
   "engine": "InnoDB",
