@@ -14,6 +14,8 @@ class ProductCategory(Document):
         name = name.replace("ü", "ue")
         name = name.replace("ä", "ae")
         name = name.replace("ö", "oe")
+        name = name.replace("/", "")
+        name = name.replace("--", "-")
         name = name.lower()
         self.name = name
 
