@@ -15,7 +15,7 @@ frappe.treeview_settings['Item Explorer'] = {
   get_label: function (node) {
     if (!node.data.title) return __('Item Explorer');
     if (node.data.type === 'Category') return node.data.title;
-    else return node.data.title + ' (' + node.data.value + ')';
+    else return node.data.title + ' (' + node.data.type + ')';
   },
   onload: function (treeview) {
     // triggered when tree view is instanciated
@@ -36,7 +36,7 @@ frappe.treeview_settings['Item Explorer'] = {
     {
       label: __('Show List'),
       condition: function (node) {
-        return node.data.type == 'Category';
+        return node.data.type == __('Category');
       },
       click: function (node) {
         const categoryValue = JSON.parse(node.data.value).value;
@@ -51,7 +51,7 @@ frappe.treeview_settings['Item Explorer'] = {
     {
       label: __('Show List'),
       condition: function (node) {
-        return node.data.type == 'Item';
+        return node.data.type == __('Item');
       },
       click: function (node) {
         const parentValue = JSON.parse(node.data.value).value;
@@ -63,9 +63,9 @@ frappe.treeview_settings['Item Explorer'] = {
       label: __('View'),
       condition: function (node) {
         return (
-          node.data.type == 'Item' ||
-          node.data.type == 'Variant Item' ||
-          node.data.type == 'BOM Item'
+          node.data.type == __('Item') ||
+          node.data.type == __('Variant Item') ||
+          node.data.type == __('BOM Item')
         );
       },
       click: function (node) {
@@ -77,7 +77,7 @@ frappe.treeview_settings['Item Explorer'] = {
       label: __('Edit Category'),
       condition: function (node) {
         return (
-          node.data.type == 'Category' &&
+          node.data.type == __('Category') &&
           JSON.parse(node.data.value).value != 'others'
         );
       },
@@ -92,9 +92,9 @@ frappe.treeview_settings['Item Explorer'] = {
       label: __('Edit Item'),
       condition: function (node) {
         return (
-          node.data.type == 'Item' ||
-          node.data.type == 'Variant Item' ||
-          node.data.type == 'BOM Item'
+          node.data.type == __('Item') ||
+          node.data.type == __('Variant Item') ||
+          node.data.type == __('BOM Item')
         );
       },
       click: function (node) {
@@ -105,7 +105,7 @@ frappe.treeview_settings['Item Explorer'] = {
     {
       label: __('Edit BOM'),
       condition: function (node) {
-        return node.data.type == 'BOM';
+        return node.data.type == __('BOM');
       },
       click: function (node) {
         window.open('/app/bom/' + JSON.parse(node.data.value).value);

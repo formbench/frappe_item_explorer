@@ -49,21 +49,21 @@ def get_children(parent=None, product_category=None):
 		return items
 	# Parent value is defined -> load children
 	elif parent_value:
-		if parent_type == "Category":
+		if parent_type == _("Category"):
 			parent_item_filters.append(["custom_product_category", "=", parent_value])
 			child_categories = get_product_categories([["parent_product_category", "=", parent_value]])
 			items = get_items(parent_item_filters)
 			return child_categories + items
-		elif parent_type == "Item":
+		elif parent_type == _("Item"):
 			variant_items = get_items(child_item_filters)
 			boms = get_boms([parent_value])
 			for item in variant_items:
-				item["type"] = "Variant Item"
+				item["type"] = _("Variant Item")
 			return boms + variant_items # child level
-		elif parent_type == "BOM":
+		elif parent_type == _("BOM"):
 			items = get_bom_items(parent_value)
 			for item in items:
-				item["type"] = "BOM Item"
+				item["type"] = _("BOM Item")
 			return items
 
 
@@ -79,11 +79,11 @@ def get_top_level_categories(parent_item_filters, category_filter):
 	# add a top level category to catch all uncategorized items
 	if len(items) > 0:
 		categories.append({
-			"value": json.dumps({ "value": "others", "type": "Category" }),
+			"value": json.dumps({ "value": "others", "type": _("Category") }),
 			"title": _("Others"),
 			"expandable": True,
 			"parent": "",
-			"type": "Category"
+			"type": _("Category")
 		})
 		# assign item to new parent "others"
 		for item in items:
@@ -107,7 +107,7 @@ def get_items(filters):
 	boms = get_boms(item_names)
 
 	for item in items:
-		item["type"] = "Item"	
+		item["type"] = _("Item")
 		for bom in boms:
 			try:
 				if bom["parent"] == item["name"]:
@@ -130,7 +130,7 @@ def get_boms(item_names):
 	)
 	for bom in boms:
 		bom["expandable"] = True
-		bom["type"] = "BOM"
+		bom["type"] = _("BOM")
 		bom["title"] = _("Part List") + " " + bom["title"]
 		if bom["is_default"] == 1:
 			bom["title"] = bom["title"] +  " (" + _("Default") + ")"
@@ -146,7 +146,7 @@ def get_bom_items(bom):
 		order_by="name",
 	)
 	for item in items:
-		item["type"] = "Item"
+		item["type"] = _("Item")
 		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
 	return items
 	
@@ -159,6 +159,6 @@ def get_product_categories(filters):
 	)
 	for category in categories:
 		category["expandable"] = True
-		category["type"] = "Category"
+		category["type"] = _("Category")
 		category["value"] = json.dumps({ "value": category["name"], "type": category["type"]})
 	return categories

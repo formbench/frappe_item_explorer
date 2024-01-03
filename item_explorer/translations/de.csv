@@ -29,5 +29,6 @@ Show List,Zur Liste
 View,Anzeigen
 Edit Category,Kategorie bearbeiten
 Edit Item,Artikel bearbeiten
-Edit BOM,Stückliste bearbeiten
+Edit BOM,Ersatzteilliste bearbeiten
 Default,Standard
+BOM Item,Ersatzteil
