@@ -96,7 +96,7 @@ def get_items(filters):
 		"Item",
 		fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
 		filters=filters,
-		order_by="name",
+		order_by="item_name",
 	)
 
 	# get boms for all items in filters
@@ -126,7 +126,7 @@ def get_boms(item_names):
 		"BOM",
 		fields=["name", "item_name as title", "item as parent", "is_default"],
 		filters=filters,
-		order_by="name",
+		order_by="item_name",
 	)
 	for bom in boms:
 		bom["expandable"] = True
@@ -139,11 +139,11 @@ def get_boms(item_names):
 	return boms
 
 def get_bom_items(bom):
-	items = frappe.get_list(
+	items = frappe.get_all(
 		"BOM Item",
 		fields=["item_code as name", "item_name as title"],
 		filters=[["docstatus", "=", 1], ["parent", "=", bom]],
-		order_by="name",
+		order_by="item_name",
 	)
 	for item in items:
 		item["type"] = _("Item")
@@ -155,7 +155,7 @@ def get_product_categories(filters):
 		"Product Category",
 		fields=["name", "title", "parent_product_category as parent", "is_group as expandable"],
 		filters=filters,
-		order_by="name",
+		order_by="title",
 	)
 	for category in categories:
 		category["expandable"] = True
