@@ -8,6 +8,17 @@ frappe.treeview_settings['Item Explorer'] = {
       options: 'Product Category',
       label: __('Product Category'),
     },
+    {
+      fieldname: 'item_code',
+      fieldtype: 'Link',
+      options: 'Item',
+      label: __('SKU'),
+    },
+    {
+      fieldname: 'product_name',
+      fieldtype: 'Data',
+      label: __('Product Name'),
+    },
   ],
   get_tree_nodes:
     'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
@@ -19,6 +30,9 @@ frappe.treeview_settings['Item Explorer'] = {
   },
   onload: function (treeview) {
     // triggered when tree view is instanciated
+    treeview.page.add_inner_button(__('Item List'), function () {
+      frappe.set_route('item');
+    });
   },
   post_render: function (treeview) {
     // triggered when tree is instanciated
@@ -65,7 +79,8 @@ frappe.treeview_settings['Item Explorer'] = {
         return (
           node.data.type == __('Item') ||
           node.data.type == __('Variant Item') ||
-          node.data.type == __('BOM Item')
+          node.data.type == __('BOM Item') ||
+          node.data.type == __('Product Bundle Item')
         );
       },
       click: function (node) {
@@ -94,7 +109,8 @@ frappe.treeview_settings['Item Explorer'] = {
         return (
           node.data.type == __('Item') ||
           node.data.type == __('Variant Item') ||
-          node.data.type == __('BOM Item')
+          node.data.type == __('BOM Item') ||
+          node.data.type == __('Product Bundle Item')
         );
       },
       click: function (node) {
@@ -109,6 +125,32 @@ frappe.treeview_settings['Item Explorer'] = {
       },
       click: function (node) {
         window.open('/app/bom/' + JSON.parse(node.data.value).value);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('View'),
+      condition: function (node) {
+        return (
+          node.data.type == __('Product Bundle') ||
+          node.data.type == __('Variant Item / Product Bundle')
+        );
+      },
+      click: function (node) {
+        window.open('/Product Bundle/' + JSON.parse(node.data.value).value);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('Edit Product Bundle'),
+      condition: function (node) {
+        return (
+          node.data.type == __('Product Bundle') ||
+          node.data.type == __('Variant Item / Product Bundle')
+        );
+      },
+      click: function (node) {
+        window.open('/app/product-bundle/' + JSON.parse(node.data.value).value);
       },
       btnClass: 'hidden-xs',
     },

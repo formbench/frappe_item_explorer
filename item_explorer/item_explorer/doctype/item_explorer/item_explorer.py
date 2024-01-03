@@ -27,7 +27,7 @@ class ItemExplorer(NestedSet):
 		pass
 
 @frappe.whitelist()
-def get_children(parent=None, product_category=None):
+def get_children(parent=None, product_category=None, item_code=None, product_name=None):
 
 	parent_object = json.loads(parent) if parent else { "value": "", "type": "" }
 	parent_value = parent_object["value"]
@@ -35,9 +35,26 @@ def get_children(parent=None, product_category=None):
 	
 	child_item_filters = [["disabled", "=", 0],["variant_of", "=", parent_value]]
 	parent_item_filters = [["disabled", "=", 0],["variant_of", "=", ""]]
-	
+
 	# Top Level
 	if parent_value == "": 
+		# if item code is set, this filter takes precedence
+		if item_code:
+			return get_items([["name", "like", item_code]])
+		
+		# product name filters allow for searching for multiple words
+		if product_name:			
+			product_name_filters = []
+			categories_filters = []
+			for product_name_word in product_name.split(" "):
+				product_name_filters.append(["item_name", "like", "%" + product_name_word + "%"])
+				categories_filters.append(["title", "like", "%" + product_name_word + "%"])
+
+			categories = get_product_categories(categories_filters)
+			items = get_items(product_name_filters)
+			return categories + items
+		
+		# only if the two filters are empty will the hierarchy be loaded
 		parent_item_filters.append(["custom_product_category", "=", ""])
 		return get_top_level_categories(parent_item_filters, product_category) # root level no items here since we put them in "others"
 	# Virtual Category for all uncategorized items
@@ -56,15 +73,20 @@ def get_children(parent=None, product_category=None):
 			return child_categories + items
 		elif parent_type == _("Item"):
 			variant_items = get_items(child_item_filters)
-			boms = get_boms([parent_value])
 			for item in variant_items:
-				item["type"] = _("Variant Item")
+				if item["type"] == _("Product Bundle"):
+					item["type"] = _("Variant Item / Product Bundle")
+				else:
+					item["type"] = _("Variant Item")
+			boms = get_boms([parent_value])
 			return boms + variant_items # child level
 		elif parent_type == _("BOM"):
 			items = get_bom_items(parent_value)
 			for item in items:
 				item["type"] = _("BOM Item")
 			return items
+		elif parent_type == _("Product Bundle"):
+			return get_product_bundle_items(parent_value)
 
 
 def get_top_level_categories(parent_item_filters, category_filter):
@@ -105,6 +127,7 @@ def get_items(filters):
 	for item in items:
 		item_names.append(item["name"])
 	boms = get_boms(item_names)
+	bundles = get_product_bundles(item_names)
 
 	for item in items:
 		item["type"] = _("Item")
@@ -114,6 +137,15 @@ def get_items(filters):
 					item["expandable"] = True
 			except:
 				pass
+
+		for bundle in bundles:
+			try:
+				if bundle["parent"] == item["name"]:
+					item["expandable"] = True
+					item["type"] = _("Product Bundle")
+			except:
+				pass
+
 		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
 	return items
 
@@ -147,6 +179,43 @@ def get_bom_items(bom):
 	)
 	for item in items:
 		item["type"] = _("Item")
+		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+	return items
+
+def get_product_bundles(item_names):
+	# construct filter for product bundles
+	filters = [["disabled", "=", 0]]
+	filters.append(["new_item_code", "in", item_names])
+	
+	bundles = frappe.get_list(
+		"Product Bundle",
+		fields=["name", "new_item_code as title", "new_item_code as parent"],
+		filters=filters,
+		order_by="new_item_code",
+	)
+
+	for bundle in bundles:
+
+		bundle["expandable"] = True
+		bundle["type"] = _("Product Bundle")
+		bundle["title"] = _("Product Bundle") + " " + bundle["title"]
+		bundle["value"] = json.dumps({ "value": bundle["name"], "type": bundle["type"]})
+
+	return bundles
+
+def get_product_bundle_items(item_name):
+	bundles = get_product_bundles(item_name)
+	if len(bundles) == 0:
+		return []
+	
+	items = frappe.get_all(
+		"Product Bundle Item",
+		fields=["item_code as name", "description as title"],
+		filters=[["parent", "=", bundles[0]["name"]]],
+		order_by="item_code",
+	)
+	for item in items:
+		item["type"] = _("Product Bundle Item")
 		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
 	return items
 	
