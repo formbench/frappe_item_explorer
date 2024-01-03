@@ -13,7 +13,7 @@
       "columns": 0,
       "creation": "2023-12-30 23:42:18.553095",
       "default": null,
-      "depends_on": null,
+      "depends_on": "eval:doc.variant_of == null",
       "description": null,
       "docstatus": 0,
       "dt": "Item",

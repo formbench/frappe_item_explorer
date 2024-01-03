@@ -1,21 +1,29 @@
 frappe.treeview_settings['Item Explorer'] = {
   breadcrumb: 'Items',
-  title: 'Item Explorer',
+  title: __('Item Explorer'),
   filters: [
     {
-      fieldname: 'item_code',
+      fieldname: 'product_category',
       fieldtype: 'Link',
-      options: 'Item',
-      label: 'Item',
+      options: 'Product Category',
+      label: __('Product Category'),
     },
   ],
   get_tree_nodes:
     'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
+  show_expand_all: false,
+  get_label: function (node) {
+    if (!node.data.title) return __('Item Explorer');
+    if (node.data.type === 'Category') return node.data.title;
+    else return node.data.title + ' (' + node.data.value + ')';
+  },
   onload: function (treeview) {
     // triggered when tree view is instanciated
   },
   post_render: function (treeview) {
     // triggered when tree is instanciated
+    // You can set args manually here, these will be available in the get_tree_nodes function
+    // treeview.args['type'] = lastClickedType
   },
   onrender: function (node) {
     // triggered when a node is instanciated
@@ -26,32 +34,81 @@ frappe.treeview_settings['Item Explorer'] = {
   // custom buttons to be displayed beside each node
   toolbar: [
     {
-      label: 'View',
-      condition: function (node) {
-        return node.data.type == 'Item' || node.data.type == 'Variant Item';
-      },
-      click: function (node) {
-        window.open('/Item/' + node.data.value);
-      },
-      btnClass: 'hidden-xs',
-    },
-    {
-      label: 'Edit Category',
+      label: __('Show List'),
       condition: function (node) {
         return node.data.type == 'Category';
       },
       click: function (node) {
-        window.open('/app/product-category/' + node.data.value);
+        const categoryValue = JSON.parse(node.data.value).value;
+        const isNotSet = JSON.stringify(['is', 'not set']);
+        window.open(
+          `/app/item/view/list?variant_of=${isNotSet}&custom_product_category=` +
+            (categoryValue === 'others' ? isNotSet : categoryValue)
+        );
       },
       btnClass: 'hidden-xs',
     },
     {
-      label: 'Edit Item',
+      label: __('Show List'),
       condition: function (node) {
-        return node.data.type == 'Item' || node.data.type == 'Variant Item';
+        return node.data.type == 'Item';
       },
       click: function (node) {
-        window.open('/app/item/' + node.data.value);
+        const parentValue = JSON.parse(node.data.value).value;
+        window.open(`/app/item/view/list?variant_of=${parentValue}`);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('View'),
+      condition: function (node) {
+        return (
+          node.data.type == 'Item' ||
+          node.data.type == 'Variant Item' ||
+          node.data.type == 'BOM Item'
+        );
+      },
+      click: function (node) {
+        window.open('/Item/' + JSON.parse(node.data.value).value);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('Edit Category'),
+      condition: function (node) {
+        return (
+          node.data.type == 'Category' &&
+          JSON.parse(node.data.value).value != 'others'
+        );
+      },
+      click: function (node) {
+        window.open(
+          '/app/product-category/' + JSON.parse(node.data.value).value
+        );
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('Edit Item'),
+      condition: function (node) {
+        return (
+          node.data.type == 'Item' ||
+          node.data.type == 'Variant Item' ||
+          node.data.type == 'BOM Item'
+        );
+      },
+      click: function (node) {
+        window.open('/app/item/' + JSON.parse(node.data.value).value);
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
+      label: __('Edit BOM'),
+      condition: function (node) {
+        return node.data.type == 'BOM';
+      },
+      click: function (node) {
+        window.open('/app/bom/' + JSON.parse(node.data.value).value);
       },
       btnClass: 'hidden-xs',
     },

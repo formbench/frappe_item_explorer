@@ -1,6 +1,7 @@
 import frappe
 from frappe.utils.nestedset import NestedSet
 from frappe.utils import json
+from frappe import _
 
 class ItemExplorer(NestedSet):
 
@@ -26,72 +27,138 @@ class ItemExplorer(NestedSet):
 		pass
 
 @frappe.whitelist()
-def get_children(parent=None, item_code=None, product_category=None, is_root=False):
-	category_filters = []
+def get_children(parent=None, product_category=None):
+
+	parent_object = json.loads(parent) if parent else { "value": "", "type": "" }
+	parent_value = parent_object["value"]
+	parent_type = parent_object["type"]
+	
+	child_item_filters = [["disabled", "=", 0],["variant_of", "=", parent_value]]
 	parent_item_filters = [["disabled", "=", 0],["variant_of", "=", ""]]
-	child_item_filters = [["disabled", "=", 0],["variant_of", "=", parent]]
-
-	# Root level
-	if is_root: # categories without a parent, items without a category
-		category_filters = ([["parent_product_category", "=", ""]])
+	
+	# Top Level
+	if parent_value == "": 
 		parent_item_filters.append(["custom_product_category", "=", ""])
-	elif parent == "others": # categories with a parent and items without a category
-		category_filters.append(["parent_product_category", "=", parent])
+		return get_top_level_categories(parent_item_filters, product_category) # root level no items here since we put them in "others"
+	# Virtual Category for all uncategorized items
+	elif parent_value == "others": 
 		parent_item_filters.append(["custom_product_category", "=", ""])
-	elif parent: # categories with a parent and items with a category
-		category_filters.append(["parent_product_category", "=", parent])
-		parent_item_filters.append(["custom_product_category", "=", parent])
+		items = get_items(parent_item_filters) # others level
+		for item in items:
+			item["parent"] = "others"
+		return items
+	# Parent value is defined -> load children
+	elif parent_value:
+		if parent_type == "Category":
+			parent_item_filters.append(["custom_product_category", "=", parent_value])
+			child_categories = get_product_categories([["parent_product_category", "=", parent_value]])
+			items = get_items(parent_item_filters)
+			return child_categories + items
+		elif parent_type == "Item":
+			variant_items = get_items(child_item_filters)
+			boms = get_boms([parent_value])
+			for item in variant_items:
+				item["type"] = "Variant Item"
+			return boms + variant_items # child level
+		elif parent_type == "BOM":
+			items = get_bom_items(parent_value)
+			for item in items:
+				item["type"] = "BOM Item"
+			return items
 
-	categories = get_product_categories(category_filters)
+
+def get_top_level_categories(parent_item_filters, category_filter):
+	if(category_filter):
+		categories = get_product_categories([["name", "=", category_filter]])
+		return categories
+	
+	categories = get_product_categories([["parent_product_category", "=", ""]])
+	parent_item_filters.append(["custom_product_category", "=", ""])
 	items = get_items(parent_item_filters)
 
 	# add a top level category to catch all uncategorized items
-	if is_root == "true" and len(items) > 0:
+	if len(items) > 0:
 		categories.append({
-			"value": "others",
-			"title": "Others",
+			"value": json.dumps({ "value": "others", "type": "Category" }),
+			"title": _("Others"),
 			"expandable": True,
 			"parent": "",
+			"type": "Category"
 		})
 		# assign item to new parent "others"
 		for item in items:
 			item.parent = "others"
 
-	collection = []
-	for item in items:
-		item["type"] = "Item"
-	for category in categories:
-		category["type"] = "Category"
-
-	if parent == "others":
-		collection = items # others level
-	elif parent:
-		variant_items = get_items(child_item_filters)
-		for item in variant_items:
-			item["type"] = "Variant Item"
-		collection = categories + items + variant_items # child level
-	else:
-		collection = categories # root level no items here since we put them in "others"
-
-	return collection
-
+	return categories
 
 def get_items(filters):
-	return frappe.get_list(
+	items = frappe.get_list(
 		"Item",
-		fields=["name as value", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
+		fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
 		filters=filters,
 		order_by="name",
 	)
+
+	# get boms for all items in filters
+	# so we know if we can expand the item further
+	item_names = []
+	for item in items:
+		item_names.append(item["name"])
+	boms = get_boms(item_names)
+
+	for item in items:
+		item["type"] = "Item"	
+		for bom in boms:
+			try:
+				if bom["parent"] == item["name"]:
+					item["expandable"] = True
+			except:
+				pass
+		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+	return items
+
+def get_boms(item_names):
+	# construct filter for boms
+	filters = [["docstatus", "=", 1], ["is_active", "=", 1]]
+	filters.append(["item", "in", item_names])
+	
+	boms = frappe.get_list(
+		"BOM",
+		fields=["name", "item_name as title", "item as parent", "is_default"],
+		filters=filters,
+		order_by="name",
+	)
+	for bom in boms:
+		bom["expandable"] = True
+		bom["type"] = "BOM"
+		bom["title"] = _("Part List") + " " + bom["title"]
+		if bom["is_default"] == 1:
+			bom["title"] = bom["title"] +  " (" + _("Default") + ")"
+		bom["value"] = json.dumps({ "value": bom["name"], "type": bom["type"]})
+
+	return boms
+
+def get_bom_items(bom):
+	items = frappe.get_list(
+		"BOM Item",
+		fields=["item_code as name", "item_name as title"],
+		filters=[["docstatus", "=", 1], ["parent", "=", bom]],
+		order_by="name",
+	)
+	for item in items:
+		item["type"] = "Item"
+		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+	return items
 	
 def get_product_categories(filters):
 	categories = frappe.get_list(
 		"Product Category",
-		fields=["name as value", "title", "parent_product_category as parent", "is_group as expandable"],
+		fields=["name", "title", "parent_product_category as parent", "is_group as expandable"],
 		filters=filters,
 		order_by="name",
 	)
 	for category in categories:
 		category["expandable"] = True
-	
+		category["type"] = "Category"
+		category["value"] = json.dumps({ "value": category["name"], "type": category["type"]})
 	return categories
