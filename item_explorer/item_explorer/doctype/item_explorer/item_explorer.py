@@ -156,14 +156,14 @@ def get_boms(item_names):
 	
 	boms = frappe.get_list(
 		"BOM",
-		fields=["name", "item_name as title", "item as parent", "is_default"],
+		fields=["name", "item_name as title", "item as parent", "is_default", "custom_version", "creation"],
 		filters=filters,
-		order_by="item_name",
+		order_by="creation desc",
 	)
 	for bom in boms:
 		bom["expandable"] = True
 		bom["type"] = _("BOM")
-		bom["title"] = _("Part List") + " " + bom["title"]
+		bom["title"] = _("Part List | ") + (( "v" + bom["custom_version"] + " | ") if bom["custom_version"] else " ") + bom["creation"].strftime("%Y-%m-%d")
 		if bom["is_default"] == 1:
 			bom["title"] = bom["title"] +  " (" + _("Default") + ")"
 		bom["value"] = json.dumps({ "value": bom["name"], "type": bom["type"]})
