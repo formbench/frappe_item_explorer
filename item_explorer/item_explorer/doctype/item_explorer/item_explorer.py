@@ -31,16 +31,13 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 
 	parent_object = json.loads(parent) if parent else { "value": "", "type": "" }
 	parent_value = parent_object["value"]
-	parent_type = parent_object["type"]
-	
-	child_item_filters = [["disabled", "=", 0],["variant_of", "=", parent_value]]
-	parent_item_filters = [["disabled", "=", 0],["variant_of", "=", ""]]
+	parent_type = parent_object["type"]	
 
 	# Top Level
 	if parent_value == "": 
 		# if item code is set, this filter takes precedence
 		if item_code:
-			return get_items([["name", "like", item_code]])
+			return get_items("by_item_code", [["name", "=", item_code]])
 		
 		# product name filters allow for searching for multiple words
 		if product_name:			
@@ -51,28 +48,25 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 				categories_filters.append(["title", "like", "%" + product_name_word + "%"])
 
 			categories = get_product_categories(categories_filters)
-			items = get_items(product_name_filters)
+			items = get_items("by_product_name", product_name_filters)
 			return categories + items
 		
 		# only if the two filters are empty will the hierarchy be loaded
-		parent_item_filters.append(["custom_product_category", "=", ""])
-		return get_top_level_categories(parent_item_filters, product_category) # root level no items here since we put them in "others"
+		return get_top_level_categories(product_category) # root level no items here since we put them in "others"
 	# Virtual Category for all uncategorized items
 	elif parent_value == "others": 
-		parent_item_filters.append(["custom_product_category", "=", ""])
-		items = get_items(parent_item_filters) # others level
+		items = get_items("parent_items", "") # others level
 		for item in items:
 			item["parent"] = "others"
 		return items
 	# Parent value is defined -> load children
 	elif parent_value:
 		if parent_type == _("Category"):
-			parent_item_filters.append(["custom_product_category", "=", parent_value])
 			child_categories = get_product_categories([["parent_product_category", "=", parent_value]])
-			items = get_items(parent_item_filters)
+			items = get_items("parent_items", parent_value)
 			return child_categories + items
 		elif parent_type == _("Item"):
-			variant_items = get_items(child_item_filters)
+			variant_items = get_items("variant_items", parent_value)
 			for item in variant_items:
 				if item["type"] == _("Product Bundle"):
 					item["type"] = _("Variant Item / Product Bundle")
@@ -89,17 +83,16 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 			return get_product_bundle_items(parent_value)
 
 
-def get_top_level_categories(parent_item_filters, category_filter):
+def get_top_level_categories(category_filter):
 	if(category_filter):
 		categories = get_product_categories([["name", "=", category_filter]])
 		return categories
 	
 	categories = get_product_categories([["parent_product_category", "=", ""]])
-	parent_item_filters.append(["custom_product_category", "=", ""])
-	items = get_items(parent_item_filters)
+	items = get_items("parent_items", "")
 
 	# add a top level category to catch all uncategorized items
-	if len(items) > 0:
+	if (len(items)) > 0:
 		categories.append({
 			"value": json.dumps({ "value": "others", "type": _("Category") }),
 			"title": _("Others"),
@@ -113,13 +106,55 @@ def get_top_level_categories(parent_item_filters, category_filter):
 
 	return categories
 
-def get_items(filters):
-	items = frappe.get_list(
-		"Item",
-		fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
-		filters=filters,
-		order_by="item_name",
-	)
+def get_items(filter_type, filter_value=None):
+	# We need to duplicate the SQL query here because frappe does not allow us excessive dependency injection, only values can be passed
+	if filter_type == "by_item_code" or filter_type == "by_product_name":
+		items = frappe.get_list(
+			"Item",
+			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
+			filters=filter_value,
+			order_by="item_name",
+		)
+	elif filter_type == "parent_items" and filter_value:
+		items = frappe.db.sql("""
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			FROM tabItem
+			WHERE 
+				disabled = 0 
+				AND (variant_of = '' OR variant_of IS NULL) 
+				AND custom_product_category = %(filter_value)s
+				AND name NOT IN (
+					SELECT bi.item_code FROM `tabBOM Item` bi
+        			JOIN `tabBOM` b ON bi.parent = b.name
+        			WHERE b.docstatus = 1
+				)
+		""", values={"filter_value": filter_value}, as_dict=True)
+	elif filter_type == "parent_items":
+		items = frappe.db.sql("""
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			FROM tabItem
+			WHERE 
+				disabled = 0 
+				AND (variant_of = '' OR variant_of IS NULL) 
+				AND (custom_product_category = '' OR custom_product_category IS NULL)
+				AND name NOT IN (
+					SELECT bi.item_code FROM `tabBOM Item` bi
+        			JOIN `tabBOM` b ON bi.parent = b.name
+        			WHERE b.docstatus = 1
+				)
+		""", as_dict=True)
+	elif filter_type == "variant_items":
+		items = frappe.db.sql("""
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			FROM tabItem
+			WHERE 
+				disabled = 0 AND variant_of = %(parent)s
+				AND name NOT IN (
+					SELECT bi.item_code FROM `tabBOM Item` bi
+        			JOIN `tabBOM` b ON bi.parent = b.name
+        			WHERE b.docstatus = 1
+				)
+		""", values={"parent": filter_value if filter_value else ""}, as_dict=True)
 
 	# get boms for all items in filters
 	# so we know if we can expand the item further
