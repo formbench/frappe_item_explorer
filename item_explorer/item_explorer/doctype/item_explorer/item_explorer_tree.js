@@ -65,7 +65,7 @@ frappe.treeview_settings['Item Explorer'] = {
     {
       label: __('Show List'),
       condition: function (node) {
-        return node.data.type == __('Item');
+        return node.data.type == __('Parent Item');
       },
       click: function (node) {
         const parentValue = JSON.parse(node.data.value).value;
@@ -78,7 +78,7 @@ frappe.treeview_settings['Item Explorer'] = {
       condition: function (node) {
         return (
           node.data.type == __('Item') ||
-          node.data.type == __('Variant Item') ||
+          node.data.type == __('Item Variant') ||
           node.data.type == __('BOM Item') ||
           node.data.type == __('Product Bundle Item')
         );
@@ -108,7 +108,8 @@ frappe.treeview_settings['Item Explorer'] = {
       condition: function (node) {
         return (
           node.data.type == __('Item') ||
-          node.data.type == __('Variant Item') ||
+          node.data.type == __('Item Variant') ||
+          node.data.type == __('Item Variant / Product Bundle') ||
           node.data.type == __('BOM Item') ||
           node.data.type == __('Product Bundle Item')
         );
@@ -133,7 +134,7 @@ frappe.treeview_settings['Item Explorer'] = {
       condition: function (node) {
         return (
           node.data.type == __('Product Bundle') ||
-          node.data.type == __('Variant Item / Product Bundle')
+          node.data.type == __('Item Variant / Product Bundle')
         );
       },
       click: function (node) {

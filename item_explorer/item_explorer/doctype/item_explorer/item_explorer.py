@@ -37,7 +37,7 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 	if parent_value == "": 
 		# if item code is set, this filter takes precedence
 		if item_code:
-			return get_items("by_item_code", [["name", "=", item_code]])
+			return get_items(list_filters=[["name", "=", item_code]])
 		
 		# product name filters allow for searching for multiple words
 		if product_name:			
@@ -48,14 +48,14 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 				categories_filters.append(["title", "like", "%" + product_name_word + "%"])
 
 			categories = get_product_categories(categories_filters)
-			items = get_items("by_product_name", product_name_filters)
+			items = get_items(list_filters=product_name_filters)
 			return categories + items
 		
 		# only if the two filters are empty will the hierarchy be loaded
 		return get_top_level_categories(product_category) # root level no items here since we put them in "others"
 	# Virtual Category for all uncategorized items
 	elif parent_value == "others": 
-		items = get_items("parent_items", "") # others level
+		items = get_items(parent_category=None) # others level
 		for item in items:
 			item["parent"] = "others"
 		return items
@@ -63,23 +63,21 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 	elif parent_value:
 		if parent_type == _("Category"):
 			child_categories = get_product_categories([["parent_product_category", "=", parent_value]])
-			items = get_items("parent_items", parent_value)
+			items = get_items(parent_category=parent_value)
 			return child_categories + items
-		elif parent_type == _("Item"):
-			variant_items = get_items("variant_items", parent_value)
-			for item in variant_items:
-				if item["type"] == _("Product Bundle"):
-					item["type"] = _("Variant Item / Product Bundle")
-				else:
-					item["type"] = _("Variant Item")
+		elif parent_type == _("Parent Item"):
+			variant_items = get_variants(parent_value)
 			boms = get_boms([parent_value])
-			return boms + variant_items # child level
+			return variant_items
+		elif parent_type == _("Item") or parent_type == _("Item Variant"):
+			boms = get_boms([parent_value])
+			return boms
 		elif parent_type == _("BOM"):
 			items = get_bom_items(parent_value)
 			for item in items:
 				item["type"] = _("BOM Item")
 			return items
-		elif parent_type == _("Product Bundle"):
+		elif parent_type == _("Product Bundle") or parent_type == _("Item Variant / Product Bundle"):
 			return get_product_bundle_items(parent_value)
 
 
@@ -89,7 +87,7 @@ def get_top_level_categories(category_filter):
 		return categories
 	
 	categories = get_product_categories([["parent_product_category", "=", ""]])
-	items = get_items("parent_items", "")
+	items = get_items(parent_category=None)
 
 	# add a top level category to catch all uncategorized items
 	if (len(items)) > 0:
@@ -106,16 +104,16 @@ def get_top_level_categories(category_filter):
 
 	return categories
 
-def get_items(filter_type, filter_value=None):
-	# We need to duplicate the SQL query here because frappe does not allow us excessive dependency injection, only values can be passed
-	if filter_type == "by_item_code" or filter_type == "by_product_name":
+def get_items(parent_category=None, list_filter=None):
+	# 
+	if list_filter:
 		items = frappe.get_list(
 			"Item",
 			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
-			filters=filter_value,
+			filters=list_filter,
 			order_by="item_name",
 		)
-	elif filter_type == "parent_items" and filter_value:
+	elif parent_category:
 		items = frappe.db.sql("""
 			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
 			FROM tabItem
@@ -128,8 +126,8 @@ def get_items(filter_type, filter_value=None):
         			JOIN `tabBOM` b ON bi.parent = b.name
         			WHERE b.docstatus = 1
 				)
-		""", values={"filter_value": filter_value}, as_dict=True)
-	elif filter_type == "parent_items":
+		""", values={"filter_value": parent_category}, as_dict=True)
+	else:
 		items = frappe.db.sql("""
 			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
 			FROM tabItem
@@ -143,18 +141,6 @@ def get_items(filter_type, filter_value=None):
         			WHERE b.docstatus = 1
 				)
 		""", as_dict=True)
-	elif filter_type == "variant_items":
-		items = frappe.db.sql("""
-			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
-			FROM tabItem
-			WHERE 
-				disabled = 0 AND variant_of = %(parent)s
-				AND name NOT IN (
-					SELECT bi.item_code FROM `tabBOM Item` bi
-        			JOIN `tabBOM` b ON bi.parent = b.name
-        			WHERE b.docstatus = 1
-				)
-		""", values={"parent": filter_value if filter_value else ""}, as_dict=True)
 
 	# get boms for all items in filters
 	# so we know if we can expand the item further
@@ -165,7 +151,7 @@ def get_items(filter_type, filter_value=None):
 	bundles = get_product_bundles(item_names)
 
 	for item in items:
-		item["type"] = _("Item")
+		item["type"] = _("Parent Item") if item["expandable"] == 1 else _("Item")
 		for bom in boms:
 			try:
 				if bom["parent"] == item["name"]:
@@ -178,6 +164,48 @@ def get_items(filter_type, filter_value=None):
 				if bundle["parent"] == item["name"]:
 					item["expandable"] = True
 					item["type"] = _("Product Bundle")
+			except:
+				pass
+
+		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+	return items
+
+def get_variants(parent_item):
+	# We need to duplicate the SQL query here because frappe does not allow us excessive dependency injection, only values can be passed
+	items = frappe.db.sql("""
+		SELECT name, item_name as title, variant_of as parent, custom_product_category as product_category
+		FROM tabItem
+		WHERE 
+			disabled = 0 AND variant_of = %(parent_item)s
+			AND name NOT IN (
+				SELECT bi.item_code FROM `tabBOM Item` bi
+				JOIN `tabBOM` b ON bi.parent = b.name
+				WHERE b.docstatus = 1
+			)
+	""", values={"parent_item": parent_item}, as_dict=True)
+
+	# get boms for all items in filters
+	# so we know if we can expand the item further
+	item_names = []
+	for item in items:
+		item_names.append(item["name"])
+	boms = get_boms(item_names)
+	bundles = get_product_bundles(item_names)
+
+	for item in items:
+		item["type"] = _("Item Variant")
+		for bom in boms:
+			try:
+				if bom["parent"] == item["name"]:
+					item["expandable"] = True
+			except:
+				pass
+
+		for bundle in bundles:
+			try:
+				if bundle["parent"] == item["name"]:
+					item["expandable"] = True
+					item["type"] = _("Item Variant / Product Bundle")
 			except:
 				pass
 

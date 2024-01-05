@@ -37,4 +37,7 @@ Product Bundle,Produkt-Bundle
 Product Bundle Item,Bundle-Artikel
 Item List,Artikel Liste
 Edit Product Bundle,Produkt-Bundle bearbeiten
-Variant Item / Product Bundle,Variante / Produkt-Bundle
+Item Variant / Product Bundle,Artikelvariante / Produkt-Bundle
+Parent Item,Stammartikel
+Item Variant,Artikelvariante
+Variant,Variante
