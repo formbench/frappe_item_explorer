@@ -104,13 +104,13 @@ def get_top_level_categories(category_filter):
 
 	return categories
 
-def get_items(parent_category=None, list_filter=None):
+def get_items(parent_category=None, list_filters=None):
 	# 
-	if list_filter:
+	if list_filters:
 		items = frappe.get_list(
 			"Item",
 			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
-			filters=list_filter,
+			filters=list_filters,
 			order_by="item_name",
 		)
 	elif parent_category:
