@@ -25,8 +25,18 @@ frappe.treeview_settings['Item Explorer'] = {
   show_expand_all: false,
   get_label: function (node) {
     if (!node.data.title) return __('Item Explorer');
-    if (node.data.type === 'Category') return node.data.title;
-    else return node.data.title + ' (' + node.data.type + ')';
+    if (node.data.type === 'Category' || node.data.type === 'Bundles Folder')
+      return node.data.title;
+    else
+      return (
+        '<b>' +
+        node.data.name +
+        '</b> ' +
+        node.data.title +
+        ' (' +
+        node.data.type +
+        ')'
+      );
   },
   onload: function (treeview) {
     // triggered when tree view is instanciated
