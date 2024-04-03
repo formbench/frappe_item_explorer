@@ -131,11 +131,11 @@ def get_bundle_items(parent_category=None):
 				AND (custom_product_category = '' OR custom_product_category IS NULL)
 				
 				# exclude items that are part of a BOM
-				AND name NOT IN (
-					SELECT bi.item_code FROM `tabBOM Item` bi
-					JOIN `tabBOM` b ON bi.parent = b.name
-					WHERE b.docstatus = 1
-				)
+				# AND name NOT IN (
+				# 	SELECT bi.item_code FROM `tabBOM Item` bi
+				# 	JOIN `tabBOM` b ON bi.parent = b.name
+				# 	WHERE b.docstatus = 1
+				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -160,11 +160,11 @@ def get_bundle_items(parent_category=None):
 				AND custom_product_category = %(filter_value)s
 				
 				# exclude items that are part of a BOM
-				AND name NOT IN (
-					SELECT bi.item_code FROM `tabBOM Item` bi
-					JOIN `tabBOM` b ON bi.parent = b.name
-					WHERE b.docstatus = 1
-				)
+				# AND name NOT IN (
+				# 	SELECT bi.item_code FROM `tabBOM Item` bi
+				# 	JOIN `tabBOM` b ON bi.parent = b.name
+				# 	WHERE b.docstatus = 1
+				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -373,11 +373,11 @@ def get_items_by_parent_category(parent_category):
 				AND custom_product_category = %(filter_value)s
 				
 				# exclude items that are part of a BOM
-				AND name NOT IN (
-					SELECT bi.item_code FROM `tabBOM Item` bi
-					JOIN `tabBOM` b ON bi.parent = b.name
-					WHERE b.docstatus = 1
-				)
+				# AND name NOT IN (
+				# 	SELECT bi.item_code FROM `tabBOM Item` bi
+				# 	JOIN `tabBOM` b ON bi.parent = b.name
+				# 	WHERE b.docstatus = 1
+				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -402,11 +402,11 @@ def get_items_by_parent_category(parent_category):
 				AND (custom_product_category = '' OR custom_product_category IS NULL)
 				
 				# exclude items that are part of a BOM		
-				AND name NOT IN (
-					SELECT bi.item_code FROM `tabBOM Item` bi
-					JOIN `tabBOM` b ON bi.parent = b.name
-					WHERE b.docstatus = 1
-				)
+				# AND name NOT IN (
+				# 	SELECT bi.item_code FROM `tabBOM Item` bi
+				# 	JOIN `tabBOM` b ON bi.parent = b.name
+				# 	WHERE b.docstatus = 1
+				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -432,12 +432,13 @@ def get_items_by_parent_item(parent_item):
 			disabled = 0 
 			AND variant_of = %(parent_item)s
 			
+			# disabled because it hides items that themselves are part of their BOM
 			# exclude items that are part of a BOM
-			AND name NOT IN (
-				SELECT bi.item_code FROM `tabBOM Item` bi
-				JOIN `tabBOM` b ON bi.parent = b.name
-				WHERE b.docstatus = 1
-			)
+			# AND name NOT IN (
+			# 	SELECT bi.item_code FROM `tabBOM Item` bi
+			# 	JOIN `tabBOM` b ON bi.parent = b.name
+			# 	WHERE b.docstatus = 1
+			# )
 	""", values={"parent_item": parent_item}, as_dict=True)
 
 	return items
