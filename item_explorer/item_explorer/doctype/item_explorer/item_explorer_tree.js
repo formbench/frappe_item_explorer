@@ -31,7 +31,7 @@ frappe.treeview_settings['Item Explorer'] = {
       return node.data.title;
     else
       return (
-        (node.data.image_url ? ('<img src="' + node.data.image_url + '" width="50" style="margin-right: 10px" />') : ('<img src="' + "https://placehold.co/50" + '" width="50" style="margin-right:10px"/>')) + '<b>' +
+        (node.data.image_url ? ('<img src="' + node.data.image_url + '" width="50" style="margin-right: 10px" />') : ('<img src="' + "/assets/item_explorer/item_placeholder.jpg" + '" width="50" style="margin-right:10px"/>')) + '<b>' +
         node.data.name +
         '</b> ' +
         node.data.title +

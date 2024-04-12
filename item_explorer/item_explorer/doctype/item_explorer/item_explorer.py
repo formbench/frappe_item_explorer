@@ -191,13 +191,14 @@ def get_bundle_items(parent_category=None):
 
 def get_variants(parent_item):
 	items = get_items_by_parent_item(parent_item)
+	items = set_image_url(items)
 	items = set_variants_expandable(items)
 	items = add_value_json_field(items)
 	return items;
 	
 def add_value_json_field(items):
 	for item in items:
-		item["value"] = json.dumps({ "value": item["name"], "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
+		item["value"] = json.dumps({ "value": item["name"] if "name" in item else "", "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
 	return items
 
 def get_boms(item_names):
@@ -232,6 +233,7 @@ def get_bom_items(bom):
 	for item in items:
 		item["type"] = _("Item")
 	
+	items = set_image_url(items)
 	items = add_value_json_field(items)
 	return items
 
@@ -271,6 +273,7 @@ def get_product_bundle_items(item_name):
 	for item in items:
 		item["type"] = _("Product Bundle Item")
 
+	items = set_image_url(items)
 	items = add_value_json_field(items)
 
 	return items
@@ -304,7 +307,8 @@ def get_product_name_filter_results(product_name):
 def get_items_in_others():
 	items = get_items(parent_category=None) # others level -> uncategorized items
 	for item in items:
-		item["parent"] = "others"
+		item["parent"] = "others"	
+
 	return items
 
 def add_bundles_folder(items, parent_category=None):
