@@ -92,6 +92,7 @@ def get_top_level_categories(category_filter):
 			"title": _("Others"),
 			"expandable": True,
 			"parent": "",
+			"image_url": "",
 			"type": _("Category")
 		})
 		# assign item to new parent "others"
@@ -113,8 +114,11 @@ def get_items(parent_category=None, list_filters=None):
 
 	# get boms for all items in filters
 	# so we know if we can expand the item further
+	items = set_image_url(items)
 	items = set_expandable(items)
 	items = add_bundles_folder(items, parent_category)
+
+	items = add_value_json_field(items)
 
 	return items
 
@@ -181,14 +185,20 @@ def get_bundle_items(parent_category=None):
 		""", values={"filter_value": parent_category}, as_dict=True)
 
 	bundles = set_expandable(bundles)
+	bundles = add_value_json_field(bundles)
 
 	return bundles
 
 def get_variants(parent_item):
 	items = get_items_by_parent_item(parent_item)
 	items = set_variants_expandable(items)
+	items = add_value_json_field(items)
 	return items;
 	
+def add_value_json_field(items):
+	for item in items:
+		item["value"] = json.dumps({ "value": item["name"], "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
+	return items
 
 def get_boms(item_names):
 	# construct filter for boms
@@ -207,7 +217,8 @@ def get_boms(item_names):
 		bom["title"] = _("Part List | ") + (( "v" + bom["custom_version"] + " | ") if bom["custom_version"] else " ") + bom["creation"].strftime("%Y-%m-%d")
 		if bom["is_default"] == 1:
 			bom["title"] = bom["title"] +  " (" + _("Default") + ")"
-		bom["value"] = json.dumps({ "value": bom["name"], "type": bom["type"]})
+		
+	boms = add_value_json_field(boms)
 
 	return boms
 
@@ -220,7 +231,8 @@ def get_bom_items(bom):
 	)
 	for item in items:
 		item["type"] = _("Item")
-		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+	
+	items = add_value_json_field(items)
 	return items
 
 def get_product_bundles(item_names):
@@ -240,7 +252,8 @@ def get_product_bundles(item_names):
 		bundle["expandable"] = True
 		bundle["type"] = _("Product Bundle")
 		bundle["title"] = _("Product Bundle") + " " + bundle["title"]
-		bundle["value"] = json.dumps({ "value": bundle["name"], "type": bundle["type"]})
+
+	bundles = add_value_json_field(bundles)
 
 	return bundles
 
@@ -257,7 +270,9 @@ def get_product_bundle_items(item_name):
 	)
 	for item in items:
 		item["type"] = _("Product Bundle Item")
-		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
+
+	items = add_value_json_field(items)
+
 	return items
 	
 def get_product_categories(filters):
@@ -270,7 +285,9 @@ def get_product_categories(filters):
 	for category in categories:
 		category["expandable"] = True
 		category["type"] = _("Category")
-		category["value"] = json.dumps({ "value": category["name"], "type": category["type"]})
+	
+	categories = add_value_json_field(categories)
+
 	return categories
 
 def get_product_name_filter_results(product_name):
@@ -295,14 +312,37 @@ def add_bundles_folder(items, parent_category=None):
 	if len(bundles) > 0:
 		parent = parent_category if parent_category else 'others'
 		items.append({
-			"value": json.dumps({ "value": parent, "type": _("Bundles Folder") }),
+			"value": json.dumps({ "value": parent, "type": _("Bundles Folder"), "image_url": "" }),
 			"title": "Bundles",
 			"expandable": True,
 			"parent": parent,
+			"image_url": "",
 			"type": _("Bundles Folder")
 		})
 
 	return items
+
+def set_image_url(items):
+	item_names = []
+	for item in items:
+		item_names.append(item["name"])
+
+	files = frappe.get_all(
+		"File",
+		fields=["attached_to_name as item_code", "file_url"],
+		filters=[["attached_to_field", "=", "image"],["attached_to_name", "in", item_names]],
+	)
+	# make boms and bundles expandable and modify type
+	for item in items:
+		for file in files:
+			try:
+				if file["item_code"] == item["name"]:
+					item["image_url"] = file["file_url"]
+			except:
+				pass
+
+	return items
+
 	
 def set_expandable(items):
 	item_names = []
@@ -328,8 +368,6 @@ def set_expandable(items):
 					item["type"] = _("Product Bundle")
 			except:
 				pass
-
-		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
 
 	return items
 	
@@ -357,7 +395,6 @@ def set_variants_expandable(items):
 			except:
 				pass
 
-		item["value"] = json.dumps({ "value": item["name"], "type": item["type"]})
 	return items
 
 

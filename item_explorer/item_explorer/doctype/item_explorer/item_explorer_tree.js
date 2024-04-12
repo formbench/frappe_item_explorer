@@ -23,13 +23,15 @@ frappe.treeview_settings['Item Explorer'] = {
   get_tree_nodes:
     'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
   show_expand_all: false,
+
   get_label: function (node) {
+    if (node.data.title === "") return __('Not title found');
     if (!node.data.title) return __('Item Explorer');
     if (node.data.type === 'Category' || node.data.type === 'Bundles Folder')
       return node.data.title;
     else
       return (
-        '<b>' +
+        (node.data.image_url ? ('<img src="' + node.data.image_url + '" width="50" style="margin-right: 10px" />') : ('<img src="' + "https://placehold.co/50" + '" width="50" style="margin-right:10px"/>')) + '<b>' +
         node.data.name +
         '</b> ' +
         node.data.title +
@@ -37,6 +39,9 @@ frappe.treeview_settings['Item Explorer'] = {
         node.data.type +
         ')'
       );
+  },
+  get_icon: function (node) {
+    return ""
   },
   onload: function (treeview) {
     // triggered when tree view is instanciated
