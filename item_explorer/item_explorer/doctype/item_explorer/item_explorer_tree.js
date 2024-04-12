@@ -23,7 +23,6 @@ frappe.treeview_settings['Item Explorer'] = {
   get_tree_nodes:
     'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
   show_expand_all: false,
-
   get_label: function (node) {
     if (node.data.title === "") return __('Not title found');
     if (!node.data.title) return __('Item Explorer');
@@ -88,21 +87,21 @@ frappe.treeview_settings['Item Explorer'] = {
       },
       btnClass: 'hidden-xs',
     },
-    {
-      label: __('View'),
-      condition: function (node) {
-        return (
-          node.data.type == __('Item') ||
-          node.data.type == __('Item Variant') ||
-          node.data.type == __('BOM Item') ||
-          node.data.type == __('Product Bundle Item')
-        );
-      },
-      click: function (node) {
-        window.open('/Item/' + JSON.parse(node.data.value).value);
-      },
-      btnClass: 'hidden-xs',
-    },
+    // {
+    //   label: __('View'),
+    //   condition: function (node) {
+    //     return (
+    //       node.data.type == __('Item') ||
+    //       node.data.type == __('Item Variant') ||
+    //       node.data.type == __('BOM Item') ||
+    //       node.data.type == __('Product Bundle Item')
+    //     );
+    //   },
+    //   click: function (node) {
+    //     window.open('/Item/' + JSON.parse(node.data.value).value);
+    //   },
+    //   btnClass: 'hidden-xs',
+    // },
     {
       label: __('Edit Category'),
       condition: function (node) {
@@ -119,9 +118,10 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
     {
-      label: __('Edit Item'),
+      label: __('Open Item'),
       condition: function (node) {
         return (
+          node.data.type == __('Parent Item') ||
           node.data.type == __('Item') ||
           node.data.type == __('Item Variant') ||
           node.data.type == __('Item Variant / Product Bundle') ||
@@ -144,21 +144,21 @@ frappe.treeview_settings['Item Explorer'] = {
       },
       btnClass: 'hidden-xs',
     },
+    // {
+    //   label: __('View'),
+    //   condition: function (node) {
+    //     return (
+    //       node.data.type == __('Product Bundle') ||
+    //       node.data.type == __('Item Variant / Product Bundle')
+    //     );
+    //   },
+    //   click: function (node) {
+    //     window.open('/Product Bundle/' + JSON.parse(node.data.value).value);
+    //   },
+    //   btnClass: 'hidden-xs',
+    // },
     {
-      label: __('View'),
-      condition: function (node) {
-        return (
-          node.data.type == __('Product Bundle') ||
-          node.data.type == __('Item Variant / Product Bundle')
-        );
-      },
-      click: function (node) {
-        window.open('/Product Bundle/' + JSON.parse(node.data.value).value);
-      },
-      btnClass: 'hidden-xs',
-    },
-    {
-      label: __('Edit Product Bundle'),
+      label: __('Open Product Bundle'),
       condition: function (node) {
         return (
           node.data.type == __('Product Bundle') ||
