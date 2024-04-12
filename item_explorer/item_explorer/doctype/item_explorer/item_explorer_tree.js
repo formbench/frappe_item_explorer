@@ -103,7 +103,7 @@ frappe.treeview_settings['Item Explorer'] = {
     //   btnClass: 'hidden-xs',
     // },
     {
-      label: __('Edit Category'),
+      label: __('Open Category'),
       condition: function (node) {
         return (
           node.data.type == __('Category') &&
