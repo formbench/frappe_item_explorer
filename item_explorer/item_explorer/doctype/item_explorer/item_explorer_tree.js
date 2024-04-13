@@ -30,17 +30,18 @@ frappe.treeview_settings['Item Explorer'] = {
       return node.data.title;
     else
       return (
-        (node.data.image_url ? ('<img src="' + node.data.image_url + '" width="50" style="margin-right: 10px" />') : ('<img src="' + "/assets/item_explorer/item_placeholder.jpg" + '" width="50" style="margin-right:10px"/>')) + '<b>' +
+    '<div class="row">' + 
+        '<div class="col-4 col-lg-2">' + 
+        '<img class="product-thumbnail" src="' + (node.data.image_url || "/assets/item_explorer/item_placeholder.jpg") + '" />' + 
+        '</div><div class="col-8 col-lg-10">' +
+        '<b>' +
         node.data.name +
-        '</b> ' +
+        '</b><br />' +
         node.data.title +
         ' (' +
         node.data.type +
-        ')'
+        ')</div></div>'
       );
-  },
-  get_icon: function (node) {
-    return ""
   },
   onload: function (treeview) {
     // triggered when tree view is instanciated
@@ -171,6 +172,7 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
   ],
+  view_template: 'item_explorer_preview',
   // enable custom buttons beside each node
   extend_toolbar: false,
 };

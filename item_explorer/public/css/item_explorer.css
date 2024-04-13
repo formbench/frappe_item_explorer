@@ -5,3 +5,12 @@
 .tree-link .icon {
   min-width: 20px;
 }
+
+.product-thumbnail {
+  width: 100%;
+}
+/* 
+.product-thumbnail:hover {
+  width: 300px;
+  position: static;
+} */

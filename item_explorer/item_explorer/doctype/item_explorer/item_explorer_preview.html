@@ -1,0 +1,26 @@
+<div style="padding: 15px; height:100%;">
+	<div class="row mb-5 position-fixed top-0">
+		<div class="col-12 col-lg-4" >
+				<a href="{{data.image_url}}" target="_blank"><img class="border" src="{{ data.image_url || '/assets/item_explorer/item_placeholder.jpg' }}"></a>
+		</div>
+		<div class="col-12 col-lg-6">
+			{% if data.type === "Item" || data.type === "Item Variant" || data.type === "Parent Item" %}
+			<h4>
+				{{ data.name }}
+			</h4>
+			<div style="padding-top: 10px;">
+				{{ data.type }}
+			</div>
+			<p>
+				{% if data.value && data.value != "BOM" %}
+				<a style="margin-right: 7px; margin-bottom: 7px" class="btn btn-default btn-xs" href="/app/bom/{{ data.value }}">
+					{{ __("Open Item {0}", [data.name.bold()]) }}</a>
+				{% endif %}
+			</p>
+			{% endif %}
+		</div>
+	</div>
+	<div class="row">
+		
+	</div>
+</div>
