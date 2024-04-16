@@ -316,7 +316,7 @@ def add_bundles_folder(items, parent_category=None):
 	if len(bundles) > 0:
 		parent = parent_category if parent_category else 'others'
 		items.append({
-			"value": json.dumps({ "value": parent, "type": _("Bundles Folder"), "image_url": "" }),
+			"name": parent,
 			"title": "Bundles",
 			"expandable": True,
 			"parent": parent,
