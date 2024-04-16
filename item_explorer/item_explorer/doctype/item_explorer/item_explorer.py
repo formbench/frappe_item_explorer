@@ -114,8 +114,8 @@ def get_items(parent_category=None, list_filters=None):
 
 	# get boms for all items in filters
 	# so we know if we can expand the item further
-	items = set_image_url(items)
 	items = set_expandable(items)
+	items = set_image_url(items)
 	items = add_bundles_folder(items, parent_category)
 
 	items = add_value_json_field(items)
@@ -185,6 +185,7 @@ def get_bundle_items(parent_category=None):
 		""", values={"filter_value": parent_category}, as_dict=True)
 
 	bundles = set_expandable(bundles)
+	bundles = set_image_url(bundles)
 	bundles = add_value_json_field(bundles)
 
 	return bundles
@@ -334,10 +335,10 @@ def set_image_url(items):
 	files = frappe.get_all(
 		"File",
 		fields=["attached_to_name as item_code", "file_url"],
-		filters=[["attached_to_field", "=", "image"],["attached_to_name", "in", item_names]],
+		filters=[["attached_to_field", "like", "%image"],["attached_to_name", "in", item_names]],
 	)
-	# make boms and bundles expandable and modify type
-	for item in items:
+
+	for item in items:			
 		for file in files:
 			try:
 				if file["item_code"] == item["name"]:
