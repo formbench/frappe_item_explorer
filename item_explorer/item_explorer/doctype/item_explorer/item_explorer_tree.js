@@ -30,13 +30,18 @@ frappe.treeview_settings['Item Explorer'] = {
       return node.data.title;
     else
       return (
-        (node.data.image_url ? ('<img src="' + node.data.image_url + '" width="50" style="margin-right: 10px" />') : ('<img src="' + "/assets/item_explorer/item_placeholder.jpg" + '" width="50" style="margin-right:10px"/>')) + '<b>' +
-        node.data.name +
-        '</b> ' +
-        node.data.title +
-        ' (' +
-        node.data.type +
-        ')'
+        '<div class="d-flex flex-row align-items-center">' + 
+          '<div class="mr-3">' + 
+            '<img src="' + 
+              (node.data.image_url || "/assets/item_explorer/item_placeholder.jpg") + 
+            '" width="50" />' + 
+          '</div>' +
+          '<div style="line-height: 1.8">' +
+            node.data.title + '<br />' +
+            '<b>' + node.data.name + '</b>'+
+            '<span class="badge bg-light ml-1" style="font-size: 12px; background-color: #f4f4f4; border-radius: 4px; padding: 4px; font-weight:normal">' + node.data.type + '</span>' +
+          '</div>' + 
+        '</div>'
       );
   },
   get_icon: function (node) {

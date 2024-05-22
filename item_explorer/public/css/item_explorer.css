@@ -5,3 +5,7 @@
 .tree-link .icon {
   min-width: 20px;
 }
+
+.tree-node.hover-active .badge.bg-light {
+  background-color: white !important;
+}
