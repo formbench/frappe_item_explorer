@@ -153,6 +153,7 @@ def get_bundle_items(parent_category=None):
 					SELECT pb.new_item_code FROM `tabProduct Bundle` pb
 					WHERE pb.disabled = 0
 				)
+			ORDER BY item_name
 		""", as_dict=True)
 	else:
 		bundles = frappe.db.sql("""
@@ -182,6 +183,7 @@ def get_bundle_items(parent_category=None):
 					SELECT pb.new_item_code FROM `tabProduct Bundle` pb
 					WHERE pb.disabled = 0
 				)
+			ORDER BY item_name
 		""", values={"filter_value": parent_category}, as_dict=True)
 
 	bundles = set_expandable(bundles)
@@ -229,7 +231,7 @@ def get_bom_items(bom):
 		"BOM Item",
 		fields=["item_code as name", "item_name as title"],
 		filters=[["docstatus", "=", 1], ["parent", "=", bom]],
-		order_by="item_name",
+		order_by="idx",
 	)
 	for item in items:
 		item["type"] = _("Item")
@@ -267,9 +269,9 @@ def get_product_bundle_items(item_name):
 	
 	items = frappe.get_all(
 		"Product Bundle Item",
-		fields=["item_code as name", "description as title"],
+		fields=["item_code as name", "description as title", "qty as quantity"],
 		filters=[["parent", "=", bundles[0]["name"]]],
-		order_by="item_code",
+		order_by="idx",
 	)
 	for item in items:
 		item["type"] = _("Product Bundle Item")
@@ -433,6 +435,7 @@ def get_items_by_parent_category(parent_category):
 					SELECT pb.new_item_code FROM `tabProduct Bundle` pb
 					WHERE pb.disabled = 0
 				)
+			ORDER BY item_name
 		""", values={"filter_value": parent_category}, as_dict=True)
 	else: # get uncategorized items
 		items = frappe.db.sql("""
@@ -462,6 +465,7 @@ def get_items_by_parent_category(parent_category):
 					SELECT pb.new_item_code FROM `tabProduct Bundle` pb
 					WHERE pb.disabled = 0
 				)
+			ORDER BY item_name
 		""", as_dict=True)
 
 	return items
@@ -481,6 +485,7 @@ def get_items_by_parent_item(parent_item):
 			# 	JOIN `tabBOM` b ON bi.parent = b.name
 			# 	WHERE b.docstatus = 1
 			# )
+		ORDER BY item_name
 	""", values={"parent_item": parent_item}, as_dict=True)
 
 	return items
