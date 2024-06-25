@@ -105,7 +105,7 @@ def get_items(parent_category=None, list_filters=None):
 	if list_filters:
 		items = frappe.get_list(
 			"Item",
-			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category"],
+			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category", "image as image_url"],
 			filters=list_filters,
 			order_by="item_name",
 		)
@@ -127,7 +127,7 @@ def get_bundle_items(parent_category=None):
 	if parent_category == "other" or not(parent_category):
 		# nearly identical as the above query, except the part for filtering by custom_product_category
 		bundles = frappe.db.sql("""
-			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category, image as image_url
 			FROM tabItem
 			WHERE 
 				disabled = 0 
@@ -157,7 +157,7 @@ def get_bundle_items(parent_category=None):
 		""", as_dict=True)
 	else:
 		bundles = frappe.db.sql("""
-			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category, image as image_url
 			FROM tabItem
 			WHERE 
 				disabled = 0 
@@ -194,7 +194,6 @@ def get_bundle_items(parent_category=None):
 
 def get_variants(parent_item):
 	items = get_items_by_parent_item(parent_item)
-	items = set_image_url(items)
 	items = set_variants_expandable(items)
 	items = add_value_json_field(items)
 	return items;
@@ -211,7 +210,7 @@ def get_boms(item_names):
 	
 	boms = frappe.get_list(
 		"BOM",
-		fields=["name", "item_name as title", "item as parent", "is_default", "custom_version", "creation"],
+		fields=["name", "item_name as title", "item as parent", "is_default", "custom_version", "creation", "image as image_url"],
 		filters=filters,
 		order_by="creation desc",
 	)
@@ -229,14 +228,13 @@ def get_boms(item_names):
 def get_bom_items(bom):
 	items = frappe.get_all(
 		"BOM Item",
-		fields=["item_code as name", "item_name as title"],
+		fields=["item_code as name", "item_name as title", "image as image_url"],
 		filters=[["docstatus", "=", 1], ["parent", "=", bom]],
 		order_by="idx",
 	)
 	for item in items:
 		item["type"] = _("Item")
 	
-	items = set_image_url(items)
 	items = add_value_json_field(items)
 	return items
 
@@ -247,13 +245,12 @@ def get_product_bundles(item_names):
 	
 	bundles = frappe.get_list(
 		"Product Bundle",
-		fields=["name", "new_item_code as title", "new_item_code as parent"],
+		fields=["name", "new_item_code as title", "new_item_code as parent", "custom_image as image_url"],
 		filters=filters,
 		order_by="new_item_code",
 	)
 
 	for bundle in bundles:
-
 		bundle["expandable"] = True
 		bundle["type"] = _("Product Bundle")
 		bundle["title"] = _("Product Bundle") + " " + bundle["title"]
@@ -305,6 +302,7 @@ def get_product_name_filter_results(product_name):
 
 	categories = get_product_categories(categories_filters)
 	items = get_items(list_filters=product_name_filters)
+	set_image_url(items)
 	return categories + items
 
 def get_items_in_others():
@@ -332,6 +330,8 @@ def add_bundles_folder(items, parent_category=None):
 def set_image_url(items):
 	item_names = []
 	for item in items:
+		if "image_url" in item and item["image_url"] != "" and item["image_url"] != None:
+			continue;
 		item_names.append(item["name"])
 
 	files = frappe.get_all(
@@ -340,7 +340,9 @@ def set_image_url(items):
 		filters=[["attached_to_field", "like", "%image"],["attached_to_name", "in", item_names]],
 	)
 
-	for item in items:			
+	for item in items:	
+		if "image_url" in item and item["image_url"] != "" and item["image_url"] != None:
+			continue;
 		for file in files:
 			try:
 				if file["item_code"] == item["name"]:
@@ -409,7 +411,7 @@ def set_variants_expandable(items):
 def get_items_by_parent_category(parent_category):
 	if parent_category: # get descendants of a category
 		items = frappe.db.sql("""
-			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category, image as image_url
 			FROM tabItem
 			WHERE 
 				disabled = 0 
@@ -439,7 +441,7 @@ def get_items_by_parent_category(parent_category):
 		""", values={"filter_value": parent_category}, as_dict=True)
 	else: # get uncategorized items
 		items = frappe.db.sql("""
-			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category
+			SELECT name, item_name as title, has_variants as expandable, variant_of as parent, custom_product_category as product_category, image as image_url
 			FROM tabItem
 			WHERE 
 				disabled = 0 
@@ -472,7 +474,7 @@ def get_items_by_parent_category(parent_category):
 
 def get_items_by_parent_item(parent_item):
 	items = frappe.db.sql("""
-		SELECT name, item_name as title, variant_of as parent, custom_product_category as product_category
+		SELECT name, item_name as title, variant_of as parent, custom_product_category as product_category, image as image_url
 		FROM tabItem
 		WHERE 
 			disabled = 0 
