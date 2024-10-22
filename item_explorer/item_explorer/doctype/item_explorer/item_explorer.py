@@ -61,15 +61,15 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 			return child_categories + items
 		elif parent_type == _("Parent Item"):
 			variant_items = get_variants(parent_item=parent_value)
-			boms = get_boms([parent_value])
+			part_lists = get_part_lists([parent_value])
 			return variant_items
 		elif parent_type == _("Item") or parent_type == _("Item Variant"):
-			boms = get_boms([parent_value])
-			return boms
-		elif parent_type == _("BOM"):
-			items = get_bom_items(parent_value)
+			part_lists = get_part_lists([parent_value])
+			return part_lists
+		elif parent_type == _("Part List"):
+			items = get_replacement_parts(parent_value)
 			for item in items:
-				item["type"] = _("BOM Item")
+				item["type"] = _("Replacement Part")
 			return items
 		elif parent_type == _("Product Bundle") or parent_type == _("Item Variant / Product Bundle"):
 			return get_product_bundle_items(parent_value)
@@ -112,7 +112,7 @@ def get_items(parent_category=None, list_filters=None):
 	else:
 		items = get_items_by_parent_category(parent_category)
 
-	# get boms for all items in filters
+	# get part lists for all items in filters
 	# so we know if we can expand the item further
 	items = set_expandable(items)
 	items = set_image_url(items)
@@ -134,11 +134,11 @@ def get_bundle_items(parent_category=None):
 				AND (variant_of = '' OR variant_of IS NULL) 
 				AND (custom_product_category = '' OR custom_product_category IS NULL)
 				
-				# exclude items that are part of a BOM
+				# exclude items that are part of a Part List
 				# AND name NOT IN (
-				# 	SELECT bi.item_code FROM `tabBOM Item` bi
-				# 	JOIN `tabBOM` b ON bi.parent = b.name
-				# 	WHERE b.docstatus = 1
+				# 	SELECT pli.item_code FROM `tabPart List Item` pli
+				# 	JOIN `tabPart List` pl ON pli.parent = pl.name
+				# 	WHERE pl.docstatus = 1
 				# )
 						
 				# exclude items that are part of a Product Bundle
@@ -164,11 +164,11 @@ def get_bundle_items(parent_category=None):
 				AND (variant_of = '' OR variant_of IS NULL) 
 				AND custom_product_category = %(filter_value)s
 				
-				# exclude items that are part of a BOM
+				# exclude items that are part of a Part List
 				# AND name NOT IN (
-				# 	SELECT bi.item_code FROM `tabBOM Item` bi
-				# 	JOIN `tabBOM` b ON bi.parent = b.name
-				# 	WHERE b.docstatus = 1
+				# 	SELECT pli.item_code FROM `tabPart List Item` pli
+				# 	JOIN `tabPart List` pl ON pli.parent = pl.name
+				# 	WHERE pl.docstatus = 1
 				# )
 						
 				# exclude items that are part of a Product Bundle
@@ -203,38 +203,63 @@ def add_value_json_field(items):
 		item["value"] = json.dumps({ "value": item["name"] if "name" in item else "", "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
 	return items
 
-def get_boms(item_names):
-	# construct filter for boms
-	filters = [["docstatus", "=", 1], ["is_active", "=", 1]]
-	filters.append(["item", "in", item_names])
+def get_part_lists(item_names):
+	part_lists = frappe.db.sql("""
+		-- get both the entries from the current replacement part field and the product history fields
+		SELECT pl.title, pvh.product_version, pvh.replacement_part_list as name, i.item_code AS parent, (i.custom_replacement_part_list = pvh.replacement_part_list) AS is_current, pl.creation, i.image as image_url
+		FROM tabItem i
+		JOIN `tabItem Product Version History` pvh ON i.`name` = pvh.parent
+		JOIN `tabPart List` pl ON pvh.replacement_part_list = pl.`name`
+		LEFT JOIN `tabProduct Version Compatibility` pvc ON pl.`name` = pvc.parent
+		WHERE pl.is_active = 1 AND pl.part_list_type = 'Replacement Part List'
+		AND i.item_code IN %(filter_value)s
+
+		UNION
+
+		SELECT pl.title, i.custom_product_version, i.custom_replacement_part_list as name, i.item_code AS parent, 1 AS is_current, pl.creation, i.image as image_url
+		FROM tabItem i
+		JOIN `tabPart List` pl ON i.custom_replacement_part_list = pl.`name`
+		LEFT JOIN `tabProduct Version Compatibility` pvc ON pl.`name` = pvc.parent
+		WHERE pl.is_active = 1 AND pl.part_list_type = 'Replacement Part List'
+		AND i.item_code IN %(filter_value)s
+
+		ORDER BY creation
+			   """, values={"filter_value": item_names}, as_dict=True)
 	
-	boms = frappe.get_list(
-		"BOM",
-		fields=["name", "item_name as title", "item as parent", "is_default", "custom_version", "creation", "image as image_url"],
-		filters=filters,
-		order_by="creation desc",
-	)
-	for bom in boms:
-		bom["expandable"] = True
-		bom["type"] = _("BOM")
-		bom["title"] = _("Part List | ") + (( "v" + bom["custom_version"] + " | ") if bom["custom_version"] else " ") + bom["creation"].strftime("%Y-%m-%d")
-		if bom["is_default"] == 1:
-			bom["title"] = bom["title"] +  " (" + _("Default") + ")"
+	for part_list in part_lists:
+		part_list["expandable"] = True
+		part_list["type"] = _("Part List")
+		part_list["title"] = _("Part List | ") + (( part_list["product_version"] + " | ") if part_list["product_version"] else " ") + part_list["creation"].strftime("%Y-%m-%d")
+		if part_list["is_current"] == 1:
+			part_list["title"] = part_list["title"] +  " (" + _("Current") + ")"
+
 		
-	boms = add_value_json_field(boms)
+	part_lists = add_value_json_field(part_lists)
 
-	return boms
+	return part_lists
 
-def get_bom_items(bom):
+def get_replacement_parts(part_list):
 	items = frappe.get_all(
-		"BOM Item",
-		fields=["item_code as name", "item_name as title", "image as image_url"],
-		filters=[["docstatus", "=", 1], ["parent", "=", bom]],
+		"Part List Item",
+		fields=["quantity", "part as name", "part_name as title"],
+		filters=[["parent", "=", part_list]],
 		order_by="idx",
 	)
-	for item in items:
-		item["type"] = _("Item")
-	
+
+
+	for idx, item in enumerate(items):
+		# Get the corresponding circled number based on index (1-based index)
+		if idx < len(circled_numbers):
+			circled_num = circled_numbers[idx]
+		else:
+			# For indices greater than 20, create custom logic (e.g., fallback to simple numbers or create circles programmatically)
+			circled_num = f"({idx + 1})"  # Fallback to a regular number in parentheses for simplicity
+		
+		# Modify the title field to include the circled number and quantity
+		item["title"] = f"<b>{circled_num}</b> {item['quantity']}x {item['title']}"
+		item["type"] = _("Item")  # Add the 'type' field
+
+	# Add additional JSON field if needed (assumed this function does extra processing)
 	items = add_value_json_field(items)
 	return items
 
@@ -357,15 +382,15 @@ def set_expandable(items):
 	item_names = []
 	for item in items:
 		item_names.append(item["name"])
-	related_boms = get_boms(item_names)
+	related_part_lists = get_part_lists(item_names)
 	related_bundles = get_product_bundles(item_names)
 
-	# make boms and bundles expandable and modify type
+	# make part lists and bundles expandable and modify type
 	for item in items:
 		item["type"] = _("Parent Item") if item["expandable"] == 1 else _("Item")
-		for bom in related_boms:
+		for part_list in related_part_lists:
 			try:
-				if bom["parent"] == item["name"]:
+				if part_list["parent"] == item["name"]:
 					item["expandable"] = True
 			except:
 				pass
@@ -384,14 +409,14 @@ def set_variants_expandable(items):
 	item_names = []
 	for item in items:
 		item_names.append(item["name"])
-	boms = get_boms(item_names)
+	part_lists = get_part_lists(item_names)
 	bundles = get_product_bundles(item_names)
 
 	for item in items:
 		item["type"] = _("Item Variant")
-		for bom in boms:
+		for part_list in part_lists:
 			try:
-				if bom["parent"] == item["name"]:
+				if part_list["parent"] == item["name"]:
 					item["expandable"] = True
 			except:
 				pass
@@ -417,13 +442,6 @@ def get_items_by_parent_category(parent_category):
 				disabled = 0 
 				AND (variant_of = '' OR variant_of IS NULL) 
 				AND custom_product_category = %(filter_value)s
-				
-				# exclude items that are part of a BOM
-				# AND name NOT IN (
-				# 	SELECT bi.item_code FROM `tabBOM Item` bi
-				# 	JOIN `tabBOM` b ON bi.parent = b.name
-				# 	WHERE b.docstatus = 1
-				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -447,13 +465,6 @@ def get_items_by_parent_category(parent_category):
 				disabled = 0 
 				AND (variant_of = '' OR variant_of IS NULL) 
 				AND (custom_product_category = '' OR custom_product_category IS NULL)
-				
-				# exclude items that are part of a BOM		
-				# AND name NOT IN (
-				# 	SELECT bi.item_code FROM `tabBOM Item` bi
-				# 	JOIN `tabBOM` b ON bi.parent = b.name
-				# 	WHERE b.docstatus = 1
-				# )
 						
 				# exclude items that are part of a Product Bundle
 				AND name NOT IN (
@@ -479,15 +490,13 @@ def get_items_by_parent_item(parent_item):
 		WHERE 
 			disabled = 0 
 			AND variant_of = %(parent_item)s
-			
-			# disabled because it hides items that themselves are part of their BOM
-			# exclude items that are part of a BOM
-			# AND name NOT IN (
-			# 	SELECT bi.item_code FROM `tabBOM Item` bi
-			# 	JOIN `tabBOM` b ON bi.parent = b.name
-			# 	WHERE b.docstatus = 1
-			# )
 		ORDER BY item_name
 	""", values={"parent_item": parent_item}, as_dict=True)
 
 	return items
+
+# Unicode circled numbers for 1-20
+circled_numbers = [
+	"\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467", "\u2468", "\u2469",
+	"\u246A", "\u246B", "\u246C", "\u246D", "\u246E", "\u246F", "\u2470", "\u2471", "\u2472", "\u2473"
+]
