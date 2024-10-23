@@ -82,7 +82,8 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 				item["type"] = _("Replacement Part")
 			return items
 		elif parent_type == _("Product Bundle") or parent_type == _("Item Variant / Product Bundle"):
-			return get_product_bundle_items(parent_value)
+			part_lists = get_part_lists([parent_value])
+			return get_product_bundle_items(parent_value) + part_lists
 		elif parent_type == _("Bundles Folder"):
 			return get_bundle_items(parent_category=parent_value)
 
@@ -270,11 +271,11 @@ def get_replacement_parts(part_list):
 	""", values={"filter_value": part_list}, as_dict=True)
 	
 	for item in items:
-		part_number = item["part_number"] if item["part_number"] else "?"
-		circled_num = f'<span style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: black; color: white; text-align: center; line-height: 24px;">{part_number}</span>'
+		part_number = item["part_number"] if item["part_number"] else None
+		circled_num = f'<span style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: black; color: white; text-align: center; line-height: 24px;">{part_number}</span> ' if part_number else ""
 		
 		# Modify the title field to include the circled number and quantity
-		item["title"] = f"{circled_num} {item['quantity']}x {item['title']}"
+		item["title"] = f"{circled_num}{item['quantity']}x {item['title']}"
 		item["type"] = _("Item")  # Add the 'type' field
 
 	# Add additional JSON field if needed (assumed this function does extra processing)
