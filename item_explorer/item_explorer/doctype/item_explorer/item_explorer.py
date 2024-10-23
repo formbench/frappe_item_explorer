@@ -28,13 +28,21 @@ class ItemExplorer(NestedSet):
 
 @frappe.whitelist()
 def get_children(parent=None, product_category=None, item_code=None, product_name=None):
-
-	parent_object = json.loads(parent) if parent else { "value": "", "type": "" }
+	# Check if 'parent' is None, empty, or invalid JSON
+	if parent and parent.strip():  # Only load JSON if 'parent' is a non-empty string
+		try:
+			parent_object = json.loads(parent)
+		except json.JSONDecodeError:
+            # Handle case where parent is an invalid JSON string but defined
+			parent_object = {"value": parent, "type": "filter"}
+	else:
+		# Fallback if 'parent' is None or empty
+		parent_object = {"value": "", "type": ""}
 	parent_value = parent_object["value"]
 	parent_type = parent_object["type"]	
 
-	# Top Level
-	if parent_value == "": 
+	# Top Level filtering
+	if parent_type == "filter": 
 		# if item code is set, this filter takes precedence
 		if item_code:
 			return get_items(list_filters=[["name", "=", item_code]])
@@ -44,6 +52,8 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 			return get_product_name_filter_results(product_name)
 		
 		# only if the two filters are empty will the hierarchy be loaded
+		return get_top_level_categories(product_category) # category filter set
+	elif parent_value == "":
 		return get_top_level_categories(product_category) # root level no items here since we put them in "others"
 	
 	# Virtual Category for all uncategorized items
@@ -204,6 +214,8 @@ def add_value_json_field(items):
 	return items
 
 def get_part_lists(item_names):
+	if(len(item_names) == 0):
+		return []
 	part_lists = frappe.db.sql("""
 		-- get both the entries from the current replacement part field and the product history fields
 		SELECT pl.title, pvh.product_version, pvh.replacement_part_list as name, i.item_code AS parent, (i.custom_replacement_part_list = pvh.replacement_part_list) AS is_current, pl.creation, i.image as image_url
@@ -239,24 +251,30 @@ def get_part_lists(item_names):
 	return part_lists
 
 def get_replacement_parts(part_list):
-	items = frappe.get_all(
-		"Part List Item",
-		fields=["quantity", "part as name", "part_name as title"],
-		filters=[["parent", "=", part_list]],
-		order_by="idx",
-	)
-
-
-	for idx, item in enumerate(items):
-		# Get the corresponding circled number based on index (1-based index)
-		if idx < len(circled_numbers):
-			circled_num = circled_numbers[idx]
-		else:
-			# For indices greater than 20, create custom logic (e.g., fallback to simple numbers or create circles programmatically)
-			circled_num = f"({idx + 1})"  # Fallback to a regular number in parentheses for simplicity
+	if(len(part_list) == 0):
+		return []
+	items = frappe.db.sql("""
+		SELECT 
+			pli.part_number, 
+			pli.quantity, 
+			pli.part AS name,
+			i.item_name as title,
+			i.image as image_url
+		FROM 
+			`tabPart List Item` pli
+		LEFT JOIN tabItem i ON i.`name` = pli.part
+		WHERE 
+			pli.parent = %(filter_value)s
+		ORDER BY 
+			pli.idx 
+	""", values={"filter_value": part_list}, as_dict=True)
+	
+	for item in items:
+		part_number = item["part_number"] if item["part_number"] else ""
+		circled_num = f'<span style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: black; color: white; text-align: center; line-height: 24px;">{part_number}</span>'
 		
 		# Modify the title field to include the circled number and quantity
-		item["title"] = f"<b>{circled_num}</b> {item['quantity']}x {item['title']}"
+		item["title"] = f"{circled_num} {item['quantity']}x {item['title']}"
 		item["type"] = _("Item")  # Add the 'type' field
 
 	# Add additional JSON field if needed (assumed this function does extra processing)
@@ -494,9 +512,3 @@ def get_items_by_parent_item(parent_item):
 	""", values={"parent_item": parent_item}, as_dict=True)
 
 	return items
-
-# Unicode circled numbers for 1-20
-circled_numbers = [
-	"\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467", "\u2468", "\u2469",
-	"\u246A", "\u246B", "\u246C", "\u246D", "\u246E", "\u246F", "\u2470", "\u2471", "\u2472", "\u2473"
-]

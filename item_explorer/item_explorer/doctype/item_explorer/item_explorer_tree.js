@@ -7,22 +7,26 @@ frappe.treeview_settings['Item Explorer'] = {
       fieldtype: 'Link',
       options: 'Product Category',
       label: __('Product Category'),
+      disable_onchange: true,
     },
     {
       fieldname: 'item_code',
       fieldtype: 'Link',
       options: 'Item',
       label: __('SKU'),
+      disable_onchange: true,
     },
     {
       fieldname: 'product_name',
       fieldtype: 'Data',
       label: __('Product Name'),
+      disable_onchange: true,
     },
   ],
   get_tree_nodes:
     'item_explorer.item_explorer.doctype.item_explorer.item_explorer.get_children',
   show_expand_all: false,
+  get_tree_root: false,
   get_label: function (node) {
     if (node.data.title === "") return __('Not title found');
     if (!node.data.title) return __('Item Explorer');
@@ -30,17 +34,17 @@ frappe.treeview_settings['Item Explorer'] = {
       return node.data.title;
     else
       return (
-        '<div class="d-flex flex-row align-items-center">' + 
-          '<div class="mr-3">' + 
-            '<img src="' + 
-              (node.data.image_url || "/assets/item_explorer/item_placeholder.jpg") + 
-            '" width="50" />' + 
-          '</div>' +
-          '<div style="line-height: 1.8">' +
-            node.data.title + '<br />' +
-            '<b>' + node.data.name + '</b>'+
-            '<span class="badge bg-light ml-1" style="font-size: 12px; background-color: #f4f4f4; border-radius: 4px; padding: 4px; font-weight:normal">' + node.data.type + '</span>' +
-          '</div>' + 
+        '<div class="d-flex flex-row align-items-center">' +
+        '<div class="mr-3">' +
+        '<img src="' +
+        (node.data.image_url || "/assets/item_explorer/item_placeholder.jpg") +
+        '" width="50" />' +
+        '</div>' +
+        '<div style="line-height: 1.8">' +
+        node.data.title + '<br />' +
+        '<b>' + node.data.name + '</b>' +
+        '<span class="badge bg-light ml-1" style="font-size: 12px; background-color: #f4f4f4; border-radius: 4px; padding: 4px; font-weight:normal">' + node.data.type + '</span>' +
+        '</div>' +
         '</div>'
       );
   },
@@ -48,10 +52,47 @@ frappe.treeview_settings['Item Explorer'] = {
     return ""
   },
   onload: function (treeview) {
+    frappe.treeview_settings['Item Explorer'].treeview = {};
+    $.extend(frappe.treeview_settings['Item Explorer'].treeview, treeview);
+
     // triggered when tree view is instanciated
     treeview.page.add_inner_button(__('Item List'), function () {
       frappe.set_route('item');
     });
+
+    var changeTriggered = false
+
+    frappe.after_ajax(() => {
+      frappe.treeview_settings['Item Explorer'].filters.forEach((filter) => {
+        if (filter.default) {
+          $("[data-fieldname='" + filter.fieldname + "']").trigger("change");
+          changeTriggered = true
+        }
+
+        filter.change = function () {
+          // override standard onchange behaviour since we want to have more control
+          // over when the tree is refreshed
+          var val = this.get_value();
+
+          // returning early when the value has not changed will avoid the double refresh of the tree
+          if (val === treeview.args[filter.fieldname]) return;
+
+          console.log("val", val);
+          treeview.args[filter.fieldname] = val;
+          if (val) {
+            treeview.root_label = val;
+          } else {
+            treeview.root_label = treeview.opts.root_label;
+          }
+          treeview.set_title();
+          treeview.make_tree();
+          pushFiltersToUrl(treeview);
+        };
+      });
+    });
+    if (!changeTriggered) {
+      treeview.make_tree();
+    }
   },
   post_render: function (treeview) {
     // triggered when tree is instanciated
@@ -76,7 +117,7 @@ frappe.treeview_settings['Item Explorer'] = {
         const isNotSet = JSON.stringify(['is', 'not set']);
         window.open(
           `/app/item/view/list?variant_of=${isNotSet}&custom_product_category=` +
-            (categoryValue === 'others' ? isNotSet : categoryValue)
+          (categoryValue === 'others' ? isNotSet : categoryValue)
         );
       },
       btnClass: 'hidden-xs',
@@ -92,21 +133,6 @@ frappe.treeview_settings['Item Explorer'] = {
       },
       btnClass: 'hidden-xs',
     },
-    // {
-    //   label: __('View'),
-    //   condition: function (node) {
-    //     return (
-    //       node.data.type == __('Item') ||
-    //       node.data.type == __('Item Variant') ||
-    //       node.data.type == __('BOM Item') ||
-    //       node.data.type == __('Product Bundle Item')
-    //     );
-    //   },
-    //   click: function (node) {
-    //     window.open('/Item/' + JSON.parse(node.data.value).value);
-    //   },
-    //   btnClass: 'hidden-xs',
-    // },
     {
       label: __('Open Category'),
       condition: function (node) {
@@ -130,7 +156,7 @@ frappe.treeview_settings['Item Explorer'] = {
           node.data.type == __('Item') ||
           node.data.type == __('Item Variant') ||
           node.data.type == __('Item Variant / Product Bundle') ||
-          node.data.type == __('BOM Item') ||
+          node.data.type == __('Part List Item') ||
           node.data.type == __('Product Bundle Item')
         );
       },
@@ -140,28 +166,15 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
     {
-      label: __('Edit BOM'),
+      label: __('Edit Part List'),
       condition: function (node) {
-        return node.data.type == __('BOM');
+        return node.data.type == __('Part List');
       },
       click: function (node) {
-        window.open('/app/bom/' + JSON.parse(node.data.value).value);
+        window.open('/app/part-list/' + JSON.parse(node.data.value).value);
       },
       btnClass: 'hidden-xs',
     },
-    // {
-    //   label: __('View'),
-    //   condition: function (node) {
-    //     return (
-    //       node.data.type == __('Product Bundle') ||
-    //       node.data.type == __('Item Variant / Product Bundle')
-    //     );
-    //   },
-    //   click: function (node) {
-    //     window.open('/Product Bundle/' + JSON.parse(node.data.value).value);
-    //   },
-    //   btnClass: 'hidden-xs',
-    // },
     {
       label: __('Open Product Bundle'),
       condition: function (node) {
@@ -179,3 +192,24 @@ frappe.treeview_settings['Item Explorer'] = {
   // enable custom buttons beside each node
   extend_toolbar: false,
 };
+
+function pushFiltersToUrl(treeview) {
+  var treeview = treeview || frappe.treeview_settings['Item Explorer'].treeview;
+
+  var pc = treeview.args.product_category;
+  var ic = treeview.args.item_code;
+  var pn = treeview.args.product_name;
+
+  const queryParams = new URLSearchParams(window.location.search);
+  if (pc) queryParams.set('product_category', pc); else queryParams.delete('product_category');
+  if (ic) queryParams.set('item_code', ic); else queryParams.delete('item_code');
+  if (pn) queryParams.set('product_name', pn); else queryParams.delete('product_name');
+
+  const newUrl = `${window.location.pathname}${queryParams ? "?" + queryParams.toString() : ""}`;
+  window.history.pushState(null, '', newUrl);
+  const newFilter = pn || ic || pc
+  if (treeview.root_label !== newFilter) {
+    treeview.root_label = newFilter;
+    console.log(treeview.root_label)
+  };
+}
