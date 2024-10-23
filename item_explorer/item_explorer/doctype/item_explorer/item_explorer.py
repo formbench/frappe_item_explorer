@@ -270,7 +270,7 @@ def get_replacement_parts(part_list):
 	""", values={"filter_value": part_list}, as_dict=True)
 	
 	for item in items:
-		part_number = item["part_number"] if item["part_number"] else ""
+		part_number = item["part_number"] if item["part_number"] else "?"
 		circled_num = f'<span style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: black; color: white; text-align: center; line-height: 24px;">{part_number}</span>'
 		
 		# Modify the title field to include the circled number and quantity
