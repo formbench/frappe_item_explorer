@@ -77,9 +77,9 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 			part_lists = get_part_lists([parent_value])
 			return part_lists
 		elif parent_type == _("Part List"):
-			items = get_replacement_parts(parent_value)
+			items = get_part_list_items(parent_value)
 			for item in items:
-				item["type"] = _("Replacement Part")
+				item["type"] = _("Part List Item")
 			return items
 		elif parent_type == _("Product Bundle") or parent_type == _("Item Variant / Product Bundle"):
 			part_lists = get_part_lists([parent_value])
@@ -116,7 +116,7 @@ def get_items(parent_category=None, list_filters=None):
 	if list_filters:
 		items = frappe.get_list(
 			"Item",
-			fields=["name", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category", "image as image_url"],
+			fields=["name", "is_stock_item", "item_name as title", "has_variants as expandable", "variant_of as parent", "custom_product_category as product_category", "image as image_url"],
 			filters=list_filters,
 			order_by="item_name",
 		)
@@ -127,6 +127,7 @@ def get_items(parent_category=None, list_filters=None):
 	# so we know if we can expand the item further
 	items = set_expandable(items)
 	items = set_image_url(items)
+	items = add_stock_levels(items)
 	items = add_bundles_folder(items, parent_category)
 
 	items = add_value_json_field(items)
@@ -199,6 +200,7 @@ def get_bundle_items(parent_category=None):
 
 	bundles = set_expandable(bundles)
 	bundles = set_image_url(bundles)
+	bundles = add_stock_levels(bundles)
 	bundles = add_value_json_field(bundles)
 
 	return bundles
@@ -206,12 +208,13 @@ def get_bundle_items(parent_category=None):
 def get_variants(parent_item):
 	items = get_items_by_parent_item(parent_item)
 	items = set_variants_expandable(items)
+	items = add_stock_levels(items)
 	items = add_value_json_field(items)
 	return items;
 	
 def add_value_json_field(items):
 	for item in items:
-		item["value"] = json.dumps({ "value": item["name"] if "name" in item else "", "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
+		item["value"] = json.dumps({ "value": item["name"] if "name" in item else "", "stock_current": item["stock_current"] if "stock_current" in item else "", "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
 	return items
 
 def get_part_lists(item_names):
@@ -243,15 +246,12 @@ def get_part_lists(item_names):
 		part_list["expandable"] = True
 		part_list["type"] = _("Part List")
 		part_list["title"] = _("Part List | ") + (( part_list["product_version"] + " | ") if part_list["product_version"] else " ") + part_list["creation"].strftime("%Y-%m-%d")
-		if part_list["is_current"] == 1:
-			part_list["title"] = part_list["title"] +  " (" + _("Current") + ")"
-
 		
 	part_lists = add_value_json_field(part_lists)
 
 	return part_lists
 
-def get_replacement_parts(part_list):
+def get_part_list_items(part_list):
 	if(len(part_list) == 0):
 		return []
 	items = frappe.db.sql("""
@@ -279,6 +279,7 @@ def get_replacement_parts(part_list):
 		item["type"] = _("Item")  # Add the 'type' field
 
 	# Add additional JSON field if needed (assumed this function does extra processing)
+	items = add_stock_levels(items)
 	items = add_value_json_field(items)
 	return items
 
@@ -299,12 +300,13 @@ def get_product_bundles(item_names):
 		bundle["type"] = _("Product Bundle")
 		bundle["title"] = _("Product Bundle") + " " + bundle["title"]
 
+	bundles = add_stock_levels(bundles)
 	bundles = add_value_json_field(bundles)
 
 	return bundles
 
 def get_product_bundle_items(item_name):
-	bundles = get_product_bundles(item_name)
+	bundles = get_product_bundles([item_name])
 	if len(bundles) == 0:
 		return []
 	
@@ -317,7 +319,9 @@ def get_product_bundle_items(item_name):
 	for item in items:
 		item["type"] = _("Product Bundle Item")
 
+	items = set_expandable(items)
 	items = set_image_url(items)
+	items = add_stock_levels(items)
 	items = add_value_json_field(items)
 
 	return items
@@ -371,6 +375,45 @@ def add_bundles_folder(items, parent_category=None):
 
 	return items
 
+def add_stock_levels(items):
+	item_names = [item["name"] for item in items]
+	bundle_items = frappe.get_all(
+		"Product Bundle Item",
+		fields=["item_code as name", "qty as quantity", "parent"],
+		filters=[["parent", "in", item_names]],
+		order_by="idx",
+	)
+	bundle_item_names = [bundle_item["name"] for bundle_item in bundle_items]
+	all_related_item_names = item_names + bundle_item_names
+	stock_levels = frappe.get_all(
+		"Bin",
+		fields=["item_code", "actual_qty"],
+		filters=[["item_code", "in", all_related_item_names]],
+	)
+	
+	for item in items:
+		if(item["type"] == _("Product Bundle") or item["type"] == _("Item Variant / Product Bundle")):
+			item = set_bundle_stock_level(item, bundle_items, stock_levels)
+		else:
+			for stock_level in stock_levels:
+				if item["name"] == stock_level["item_code"]:
+					item["stock_current"] = stock_level["actual_qty"]
+					break
+
+	return items
+
+def set_bundle_stock_level(item, bundle_items, stock_levels):
+	_bundle_items = [bundle_item for bundle_item in bundle_items if bundle_item["parent"] == item["name"]]
+	item["stock_current"] = None
+	for _bundle_item in _bundle_items:
+		for stock_level in stock_levels:
+			if _bundle_item["name"] == stock_level["item_code"]:
+				bundle_item_qty = _bundle_item["quantity"] if _bundle_item["quantity"] != 0 else 1 # ensure not dividing by zero later
+				possible_item_qty = stock_level["actual_qty"] / bundle_item_qty
+				item["stock_current"] = possible_item_qty if item["stock_current"] == None or possible_item_qty < item["stock_current"] else item["stock_current"]
+				break
+	return item
+
 def set_image_url(items):
 	item_names = []
 	for item in items:
@@ -398,14 +441,15 @@ def set_image_url(items):
 
 	
 def set_expandable(items):
-	item_names = []
-	for item in items:
-		item_names.append(item["name"])
+	item_names = [item["name"] for item in items]
 	related_part_lists = get_part_lists(item_names)
 	related_bundles = get_product_bundles(item_names)
 
 	# make part lists and bundles expandable and modify type
 	for item in items:
+		if(not "expandable" in item):
+			item["expandable"] = False
+
 		item["type"] = _("Parent Item") if item["expandable"] == 1 else _("Item")
 		for part_list in related_part_lists:
 			try:
@@ -422,6 +466,8 @@ def set_expandable(items):
 			except:
 				pass
 
+	
+
 	return items
 	
 def set_variants_expandable(items):
@@ -432,7 +478,11 @@ def set_variants_expandable(items):
 	bundles = get_product_bundles(item_names)
 
 	for item in items:
+		if(not "expandable" in item):
+			item["expandable"] = False		
+		
 		item["type"] = _("Item Variant")
+
 		for part_list in part_lists:
 			try:
 				if part_list["parent"] == item["name"]:

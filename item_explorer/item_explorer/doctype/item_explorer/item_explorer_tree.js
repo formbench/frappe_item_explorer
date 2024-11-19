@@ -30,6 +30,11 @@ frappe.treeview_settings['Item Explorer'] = {
   get_label: function (node) {
     if (node.data.title === "") return __('Not title found');
     if (!node.data.title) return __('Item Explorer');
+    stock_text = ""
+    if (node.data.stock_current !== undefined) {
+      stock_color = node.data.stock_current > 0 ? '#46c06a;' : '#dc6161;'
+      stock_text = '<span style="color: ' + stock_color + 'font-size: 12px; font-weight:normal"> ' + node.data.stock_current + ' Stück</span>'
+    }
     if (node.data.type === 'Category' || node.data.type === 'Bundles Folder')
       return node.data.title;
     else
@@ -44,6 +49,7 @@ frappe.treeview_settings['Item Explorer'] = {
         node.data.title + '<br />' +
         '<b>' + node.data.name + '</b>' +
         '<span class="badge bg-light ml-1" style="font-size: 12px; background-color: #f4f4f4; border-radius: 4px; padding: 4px; font-weight:normal">' + node.data.type + '</span>' +
+        stock_text +
         '</div>' +
         '</div>'
       );
@@ -166,7 +172,7 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
     {
-      label: __('Edit Part List'),
+      label: __('Open Part List'),
       condition: function (node) {
         return node.data.type == __('Part List');
       },
