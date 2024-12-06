@@ -397,21 +397,28 @@ def add_stock_levels(items):
 		else:
 			for stock_level in stock_levels:
 				if item["name"] == stock_level["item_code"]:
-					item["stock_current"] = stock_level["actual_qty"]
-					break
+					item["stock_current"] = item["stock_current"] + stock_level["actual_qty"] if "stock_current" in item else stock_level["actual_qty"]
 
 	return items
 
 def set_bundle_stock_level(item, bundle_items, stock_levels):
 	_bundle_items = [bundle_item for bundle_item in bundle_items if bundle_item["parent"] == item["name"]]
 	item["stock_current"] = None
+	sum_stock_levels = {}
+
+	for stock_level in stock_levels:
+		item_code = stock_level["item_code"]
+		frappe.msgprint(f"stock level item code: {item_code} (should be same)")
+		sum_stock_levels[item_code] = sum_stock_levels[item_code] + stock_level["actual_qty"] if sum_stock_levels.get(item_code) != None else stock_level["actual_qty"]
+
 	for _bundle_item in _bundle_items:
-		for stock_level in stock_levels:
-			if _bundle_item["name"] == stock_level["item_code"]:
-				bundle_item_qty = _bundle_item["quantity"] if _bundle_item["quantity"] != 0 else 1 # ensure not dividing by zero later
-				possible_item_qty = stock_level["actual_qty"] / bundle_item_qty
-				item["stock_current"] = possible_item_qty if item["stock_current"] == None or possible_item_qty < item["stock_current"] else item["stock_current"]
-				break
+		bundle_item_sku = _bundle_item["name"]
+		bundle_item_qty = _bundle_item["quantity"] if _bundle_item["quantity"] != 0 else 1 # ensure not dividing by zero later
+		stock = sum_stock_levels[bundle_item_sku] if sum_stock_levels.get(bundle_item_sku) != None else 0
+
+		possible_item_qty = stock / bundle_item_qty
+		item["stock_current"] = possible_item_qty if item["stock_current"] == None or possible_item_qty < item["stock_current"] else item["stock_current"]
+	
 	return item
 
 def set_image_url(items):
