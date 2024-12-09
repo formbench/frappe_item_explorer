@@ -50,6 +50,7 @@ frappe.treeview_settings['Item Explorer'] = {
         '<b>' + node.data.name + '</b>' +
         '<span class="badge bg-light ml-1" style="font-size: 12px; background-color: #f4f4f4; border-radius: 4px; padding: 4px; font-weight:normal">' + node.data.type + '</span>' +
         stock_text +
+        (node.data.subtext ? '<br /><span style="font-size: 12px; font-weight:normal; color: grey">' + node.data.subtext + '</span>' : "") +
         '</div>' +
         '</div>'
       );

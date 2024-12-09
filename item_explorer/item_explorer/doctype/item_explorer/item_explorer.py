@@ -259,6 +259,7 @@ def get_part_list_items(part_list):
 			pli.part_number, 
 			pli.quantity, 
 			pli.part AS name,
+			pli.comment as subtext,
 			i.item_name as title,
 			i.image as image_url
 		FROM 
