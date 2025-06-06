@@ -156,6 +156,23 @@ frappe.treeview_settings['Item Explorer'] = {
       btnClass: 'hidden-xs',
     },
     {
+      label: __('<b>⧉</b> Copy'),
+      condition: function (node) {
+        return (
+          node.data.type == __('Parent Item') ||
+          node.data.type == __('Item') ||
+          node.data.type == __('Item Variant') ||
+          node.data.type == __('Item Variant / Product Bundle') ||
+          node.data.type == __('Part List Item') ||
+          node.data.type == __('Product Bundle Item')
+        );
+      },
+      click: function (node) {
+        navigator.clipboard.writeText(JSON.parse(node.data.value).value)
+      },
+      btnClass: 'hidden-xs',
+    },
+    {
       label: __('Open Item'),
       condition: function (node) {
         return (
