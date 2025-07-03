@@ -319,6 +319,7 @@ def get_product_bundle_items(item_name):
 	)
 	for item in items:
 		item["type"] = _("Product Bundle Item")
+		item["title"] = f"<b>{int(item['quantity'])}x</b> {item['title']}"
 
 	items = set_expandable(items)
 	items = set_image_url(items)
