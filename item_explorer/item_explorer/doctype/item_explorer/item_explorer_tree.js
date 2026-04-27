@@ -163,6 +163,7 @@ frappe.treeview_settings['Item Explorer'] = {
           node.data.type == __('Item') ||
           node.data.type == __('Item Variant') ||
           node.data.type == __('Item Variant / Product Bundle') ||
+          node.data.type == __('Product Bundle') ||
           node.data.type == __('Part List Item') ||
           node.data.type == __('Product Bundle Item')
         );
@@ -180,6 +181,7 @@ frappe.treeview_settings['Item Explorer'] = {
           node.data.type == __('Item') ||
           node.data.type == __('Item Variant') ||
           node.data.type == __('Item Variant / Product Bundle') ||
+          node.data.type == __('Product Bundle') ||
           node.data.type == __('Part List Item') ||
           node.data.type == __('Product Bundle Item')
         );
