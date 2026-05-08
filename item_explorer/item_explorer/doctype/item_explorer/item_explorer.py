@@ -77,10 +77,7 @@ def get_children(parent=None, product_category=None, item_code=None, product_nam
 			part_lists = get_part_lists([parent_value])
 			return part_lists
 		elif parent_type == _("Part List"):
-			items = get_part_list_items(parent_value)
-			for item in items:
-				item["type"] = _("Part List Item")
-			return items
+			return get_part_list_items(parent_value)
 		elif parent_type == _("Product Bundle") or parent_type == _("Item Variant / Product Bundle"):
 			part_lists = get_part_lists([parent_value])
 			return get_product_bundle_items(parent_value) + part_lists
@@ -277,7 +274,8 @@ def get_part_list_items(part_list):
 		
 		# Modify the title field to include the circled number and quantity
 		item["title"] = f"{circled_num}{item['quantity']}x {item['title']}"
-		item["type"] = _("Item")  # Add the 'type' field
+
+	items = set_expandable(items)
 
 	# Add additional JSON field if needed (assumed this function does extra processing)
 	items = add_stock_levels(items)
