@@ -211,7 +211,15 @@ def get_variants(parent_item):
 	
 def add_value_json_field(items):
 	for item in items:
-		item["value"] = json.dumps({ "value": item["name"] if "name" in item else "", "stock_current": item["stock_current"] if "stock_current" in item else "", "type": item["type"], "image_url": item["image_url"] if "image_url" in item else ""})
+		value_data = {
+			"value": item["name"] if "name" in item else "",
+			"stock_current": item["stock_current"] if "stock_current" in item else "",
+			"type": item["type"],
+			"image_url": item["image_url"] if "image_url" in item else "",
+		}
+		if "bundle_name" in item:
+			value_data["bundle_name"] = item["bundle_name"]
+		item["value"] = json.dumps(value_data)
 	return items
 
 def get_part_lists(item_names):
@@ -375,14 +383,44 @@ def add_bundles_folder(items, parent_category=None):
 
 	return items
 
+def resolve_bundle_doc_names(item_codes):
+	if not item_codes:
+		return {}
+
+	bundles_by_sku = frappe.get_all(
+		"Product Bundle",
+		fields=["name", "new_item_code"],
+		filters=[["new_item_code", "in", item_codes], ["disabled", "=", 0]],
+	)
+	result = {bundle["new_item_code"]: bundle["name"] for bundle in bundles_by_sku}
+
+	remaining_codes = [code for code in item_codes if code not in result]
+	if remaining_codes:
+		bundles_by_name = frappe.get_all(
+			"Product Bundle",
+			fields=["name"],
+			filters=[["name", "in", remaining_codes], ["disabled", "=", 0]],
+		)
+		for bundle in bundles_by_name:
+			result[bundle["name"]] = bundle["name"]
+
+	return result
+
 def add_stock_levels(items):
 	item_names = [item["name"] for item in items]
-	bundle_items = frappe.get_all(
-		"Product Bundle Item",
-		fields=["item_code as name", "qty as quantity", "parent"],
-		filters=[["parent", "in", item_names]],
-		order_by="idx",
-	)
+	bundle_types = (_("Product Bundle"), _("Item Variant / Product Bundle"))
+	bundle_item_codes = [item["name"] for item in items if item.get("type") in bundle_types]
+	bundle_doc_names_by_item_code = resolve_bundle_doc_names(bundle_item_codes)
+	bundle_doc_names = list(set(bundle_doc_names_by_item_code.values()))
+
+	bundle_items = []
+	if bundle_doc_names:
+		bundle_items = frappe.get_all(
+			"Product Bundle Item",
+			fields=["item_code as name", "qty as quantity", "parent"],
+			filters=[["parent", "in", bundle_doc_names]],
+			order_by="idx",
+		)
 	bundle_item_names = [bundle_item["name"] for bundle_item in bundle_items]
 	all_related_item_names = item_names + bundle_item_names
 	stock_levels = frappe.get_all(
@@ -392,8 +430,11 @@ def add_stock_levels(items):
 	)
 	
 	for item in items:
-		if(item["type"] == _("Product Bundle") or item["type"] == _("Item Variant / Product Bundle")):
-			item = set_bundle_stock_level(item, bundle_items, stock_levels)
+		if item.get("type") in bundle_types:
+			bundle_doc_name = bundle_doc_names_by_item_code.get(item["name"])
+			if bundle_doc_name:
+				item["bundle_name"] = bundle_doc_name
+				item = set_bundle_stock_level(item, bundle_items, stock_levels, bundle_doc_name)
 		else:
 			for stock_level in stock_levels:
 				if item["name"] == stock_level["item_code"]:
@@ -401,8 +442,8 @@ def add_stock_levels(items):
 
 	return items
 
-def set_bundle_stock_level(item, bundle_items, stock_levels):
-	_bundle_items = [bundle_item for bundle_item in bundle_items if bundle_item["parent"] == item["name"]]
+def set_bundle_stock_level(item, bundle_items, stock_levels, bundle_doc_name):
+	_bundle_items = [bundle_item for bundle_item in bundle_items if bundle_item["parent"] == bundle_doc_name]
 	item["stock_current"] = None
 	sum_stock_levels = {}
 

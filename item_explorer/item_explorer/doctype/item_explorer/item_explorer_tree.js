@@ -206,11 +206,13 @@ frappe.treeview_settings['Item Explorer'] = {
       condition: function (node) {
         return (
           node.data.type == __('Product Bundle') ||
-          node.data.type == __('Variant Item / Product Bundle')
+          node.data.type == __('Item Variant / Product Bundle')
         );
       },
       click: function (node) {
-        window.open('/app/product-bundle/' + JSON.parse(node.data.value).value);
+        const nodeValue = JSON.parse(node.data.value);
+        const bundleName = nodeValue.bundle_name || nodeValue.value;
+        window.open('/app/product-bundle/' + bundleName);
       },
       btnClass: 'hidden-xs',
     },
