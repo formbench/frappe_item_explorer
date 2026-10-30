@@ -26,8 +26,9 @@ class ItemExplorer(NestedSet):
 	def get_stats(args):
 		pass
 
+# frappe's tree view calls loaders as (doctype, parent, **filters) and adds args of its own (is_root, include_disabled)
 @frappe.whitelist()
-def get_children(parent=None, product_category=None, item_code=None, product_name=None):
+def get_children(doctype=None, parent=None, product_category=None, item_code=None, product_name=None, **kwargs):
 	# Check if 'parent' is None, empty, or invalid JSON
 	if parent and parent.strip():  # Only load JSON if 'parent' is a non-empty string
 		try:
@@ -431,6 +432,8 @@ def set_image_url(items):
 		"File",
 		fields=["attached_to_name as item_code", "file_url"],
 		filters=[["attached_to_field", "like", "%image"],["attached_to_name", "in", item_names]],
+		# pinned to v15's implicit File order (v16 defaults to creation desc) so the same file wins below
+		order_by="modified desc",
 	)
 
 	for item in items:	
