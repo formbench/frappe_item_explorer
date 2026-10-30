@@ -3,11 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - develop
+      - main
   pull_request:
 
 concurrency:
-  group: develop-item_explorer-${{ github.event.number }}
+  group: ci-item_explorer-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -15,28 +15,48 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Server
+      matrix:
+        include:
+          - label: version-15
+            branch: version-15
+            python: '3.12'
+            mariadb: '10.6'
+          - label: version-16
+            branch: version-16
+            python: '3.14'
+            mariadb: '11.8'
+    name: Server (${{ matrix.label }})
 
     services:
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:${{ matrix.mariadb }}
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+        # mariadb 11 images no longer ship mysqladmin
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
+      # erpnext's install needs the bench default redis ports (cache 13000, queue 11000)
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
 
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
 
       - name: Setup Node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           check-latest: true
@@ -45,36 +65,37 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pip-${{ matrix.python }}-
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
-        run: 'echo "::set-output name=dir::$(yarn cache dir)"'
+        run: 'echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"'
 
       - uses: actions/cache@v4
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-yarn-${{ matrix.branch }}-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-yarn-${{ matrix.branch }}-
 
       - name: Setup
         run: |
           pip install frappe-bench
-          bench init --frappe-branch version-15 --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          bench init --frappe-branch ${{ matrix.branch }} --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
           mysql --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mysql --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
       - name: Install
         working-directory: /home/runner/frappe-bench
         run: |
+          bench get-app erpnext --branch ${{ matrix.branch }}
           bench get-app item_explorer $GITHUB_WORKSPACE
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
+          bench --site test_site install-app erpnext
           bench --site test_site install-app item_explorer
           bench build
         env:
